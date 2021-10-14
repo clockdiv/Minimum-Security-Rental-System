@@ -1,3 +1,8 @@
+.DS_Store
+inventory.sqlite
+rental.sqlite
+users.sqlite
+
 # C++ objects and libs
 *.slo
 *.lo
