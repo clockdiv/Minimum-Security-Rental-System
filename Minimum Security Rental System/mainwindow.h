@@ -23,10 +23,13 @@ public:
 private:
     Ui::MainWindow *ui;
     QSqlDatabase m_db;
-    QString dataDirectory = "/Users/julian/Desktop/qttest/data/";
+    QString dataDirectory = "/Users/julian/Documents/Qt/MinimumSecurityRentalSystem/Minimum Security Rental System/data/";
     QString filename_db = dataDirectory + "inventory.sqlite";
 
     QImage itemImage;
+
+    QStringListModel* nameListModel;
+    QStringList nameList;
 
     QScopedPointer<QCamera> m_camera;
     QScopedPointer<QCameraImageCapture> m_imageCapture;
@@ -43,11 +46,13 @@ private slots:
     // Menü and Tab-Group
     // =========================
     void on_actionPreferences_triggered();
-    void on_tabWidget_tabBarClicked(int i);
+    void on_tabWidget_tabBarClicked(int tabID);
 
     // Tab "Rental"
     // =========================
-
+    void on_pushButton_addUser_clicked();
+    void on_lineEdit_userName_textChanged();
+    void on_listView_users_doubleClicked(QModelIndex);
     // Tab "Reservation"
     // =========================
 
@@ -59,6 +64,9 @@ private slots:
 
     // Tab "Show Inventory"
     // =========================
+    void on_pushButton_overviewInventory_Reload_clicked();
+    void on_pushButton_temp_clicked();
+    void clearInventoryOverview();
 
     // Tab "Add Inventory"
     // =========================
@@ -78,16 +86,14 @@ private slots:
     void displayCaptureError(int id, const QCameraImageCapture::Error error, const QString &errorString);
     void takeImage();
 
-    // others:
-//    void loadImageFile(const QString &filename);
+    // Common methods:
+    // ===========================
+    QImage loadImageFile(const QString &filename);
 //    void setImage(const QImage &newImage);
 
-    // unsorted:
-    void on_pushButton_temp_clicked();
-    void on_pushButton_overviewInventory_Reload_clicked();
+    // unsorted / tests:
     void createButton();
     void showMessage();
-    void clearInventoryOverview();
     void on_pushButton_openDialog_clicked(); // non-dynamic signal-slot-connection ("auto connect"?)
 
 

@@ -15,11 +15,12 @@ class InventoryWidget : public QWidget
 public:
     InventoryWidget(QWidget *parent = nullptr);
     ~InventoryWidget();
-
     void setItemName(const QString& name);
     void setItemID(const QString& id);
-    void setItemManufacturer(const QString& manufacturer);
-    void setMainWindow(MainWindow* mw){mainWindow = mw;}
+    void setItemDescription(const QString& description);
+    void setImage(const QImage& image);
+    void setBackgroundDark();
+    void setMainWindow(MainWindow* mw);
 
 
 private:

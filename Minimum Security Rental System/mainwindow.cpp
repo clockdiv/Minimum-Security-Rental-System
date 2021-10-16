@@ -5,6 +5,9 @@
 #include <QFileDialog>
 #include <QImage>
 #include <QImageReader>
+#include <QListView>
+#include <QStringListModel>
+#include <QStringList>
 
 //#include <QCameraViewfinder>
 //#include <QMediaMetaData>
@@ -36,7 +39,8 @@ MainWindow::MainWindow(QWidget *parent)
     {
         qDebug() << cameraInfo.description();
     }
-    setCamera(QCameraInfo::defaultCamera());
+    //setCamera(QCameraInfo::defaultCamera());
+
     /*
     for (const QCameraInfo &cameraInfo : availableCameras) {
         QAction *videoDeviceAction = new QAction(cameraInfo.description(), videoDevicesGroup);
@@ -49,16 +53,29 @@ MainWindow::MainWindow(QWidget *parent)
         //ui->menuDevices->addAction(videoDeviceAction);
     }
     */
-    m_imageSettings.setResolution(1920,1080);
-    m_imageSettings.setQuality(QMultimedia::HighQuality);
-    m_imageCapture->setEncodingSettings(m_imageSettings);
 
 
-    connect(ui->pushButton_openDialog_2, SIGNAL(clicked()), this, SLOT(createButton()));
+    //connect(ui->pushButton_openDialog_2, SIGNAL(clicked()), this, SLOT(createButton()));
     //connect(ui->pushButton_inventorySave, SIGNAL(clicked()), this, SLOT(saveInventoryToDB()));
+    //connect(ui->comboBox_userName, SIGNAL(currentTextChanged(const QString &)), this, SLOT(fillComboBox_userName(const QString &)));
 
     ui->comboBox_storageRoom->addItem("1.74");
     ui->comboBox_storageRoom->addItem("Ladenlokal");
+
+    ui->comboBox_userDepartment->addItem("");
+    ui->comboBox_userDepartment->addItem("Zeitgenössische Puppenspielkunst");
+    ui->comboBox_userDepartment->addItem("Regie");
+    ui->comboBox_userDepartment->addItem("Dramaturgie");
+    ui->comboBox_userDepartment->addItem("Spiel && Objekt");
+    ui->comboBox_userDepartment->addItem("Choreographie");
+    ui->comboBox_userDepartment->addItem("Schauspiel");
+    ui->comboBox_userDepartment->addItem("Technik");
+    ui->comboBox_userDepartment->addItem("Verwaltung");
+
+    nameListModel = new QStringListModel(this);
+    ui->listView_users->setModel(nameListModel);
+
+
 }
 
 MainWindow::~MainWindow()
@@ -78,21 +95,92 @@ void MainWindow::on_actionPreferences_triggered()
         qDebug() << "cancel";
 }
 
-void MainWindow::on_tabWidget_tabBarClicked(int i)
+void MainWindow::on_tabWidget_tabBarClicked(int tabID)
 {
-    qDebug() << i;
-    if(i == 5)
+    switch (tabID)
     {
-        // turn camera on
-        setCamera(QCameraInfo::defaultCamera());
+        case 0:
+            if(!m_camera.isNull()) m_camera->stop();
+            break;
+        case 1:
+            if(!m_camera.isNull()) m_camera->stop();
+            break;
+        case 2:
+            if(!m_camera.isNull()) m_camera->stop();
+            break;
+        case 3:
+            if(!m_camera.isNull()) m_camera->stop();
+            break;
+        case 4:
+            if(!m_camera.isNull()) m_camera->stop();
+            on_pushButton_overviewInventory_Reload_clicked();
+            break;
+        case 5:
+            setCamera(QCameraInfo::defaultCamera());
+            break;
+        default:
+            break;
     }
-    else {
-        m_camera->stop();
-    }
+
 }
 
 // Tab "Rental"
 // =========================
+
+void MainWindow::on_pushButton_addUser_clicked()
+{
+    QSqlQuery query;
+
+    query.prepare("INSERT INTO Users (Name, Surname, Department, Year, Email) VALUES (:name, :surname, :department, :year, :email)");
+    query.bindValue(":name", ui->lineEdit_userName->text().trimmed());
+    query.bindValue(":surname", ui->lineEdit_userSurname->text().trimmed());
+    query.bindValue(":department", ui->comboBox_userDepartment->currentText());
+    query.bindValue(":year", ui->spinBox_userYear->value());
+    query.bindValue(":email", ui->lineEdit_userEmail->text());
+
+    if(query.exec()) {
+        qDebug() << "user added";
+    } else
+    {
+        qDebug() << query.lastError().text();
+    }
+}
+
+void MainWindow::on_lineEdit_userName_textChanged()
+{
+    QString userName = ui->lineEdit_userName->text();
+    nameList.clear();
+
+    if (userName == "") {
+        nameListModel->setStringList(nameList);
+        return;
+    }
+
+    QSqlQuery query;
+    query.prepare("SELECT * FROM Users WHERE Name LIKE :user ORDER BY Name");
+    query.bindValue(":user", userName+"%");
+    if(!query.exec())
+    {
+       qDebug() << "Error: " << query.lastError().text();
+    }
+    else
+    {
+        while(query.next()) {
+            QString entry = query.value("Name").toString() + " "
+                            + query.value("Surname").toString() + ", "
+                            + query.value("Department").toString();
+            nameList.append(entry);
+            nameListModel->setStringList(nameList);
+        }
+    }
+}
+
+void MainWindow::on_listView_users_doubleClicked(QModelIndex index)
+{
+    qDebug() << "double clicked " << index ;
+
+}
+
 
 // Tab "Reservation"
 // =========================
@@ -105,7 +193,76 @@ void MainWindow::on_tabWidget_tabBarClicked(int i)
 
 // Tab "Show Inventory"
 // =========================
+void MainWindow::on_pushButton_overviewInventory_Reload_clicked()
+{
+    clearInventoryOverview();
 
+    QSqlQuery query("SELECT * FROM Inventory");
+    uint16_t i = 0;
+    while(query.next())
+    {
+        QString objectName = query.value("ObjectName").toString();
+        QString objectID = query.value("ObjectID").toString();
+        QString manufacturer = query.value("Manufacturer").toString();
+        QString description = query.value("Description").toString();
+        QString storageRoom = query.value("StorageRoom").toString();
+        QString filename = dataDirectory + "img/" + objectID + ".jpg";
+
+        InventoryWidget* inventorywidget = new InventoryWidget();
+        inventorywidget->setItemName(QString(manufacturer + " " + objectName));
+        inventorywidget->setItemID(objectID);
+        inventorywidget->setItemDescription(description);
+        QImage image = loadImageFile(filename);
+        if(image.data_ptr() != NULL) {
+            inventorywidget->setImage(image);
+        }
+        if(i%2==0) inventorywidget->setBackgroundDark();
+        i++;
+        inventorywidget->setMainWindow(this);
+
+        ui->scrollAreaLayout->addWidget(inventorywidget);
+    }
+}
+
+void MainWindow::on_pushButton_temp_clicked() {
+    clearInventoryOverview();
+}
+
+void MainWindow::clearInventoryOverview()
+{
+    if(ui->scrollAreaLayout->count() <= 0) return;
+
+//    for(int i = ui->scrollAreaLayout->count(); i >= 0 ; --i) {
+//       ui->scrollAreaLayout->removeItem(ui->scrollAreaLayout->itemAt(i));
+//       //delete ui->scrollAreaLayout->itemAt(i);
+//    }
+
+    QLayoutItem* child;
+    while( (child = ui->scrollAreaLayout->takeAt(0)) != 0) {
+        child->widget()->setHidden(true);
+        child->widget()->deleteLater();
+        //delete child;
+    }
+
+//    ui->scrollAreaLayout->update();
+//    ui->scrollAreaWidgetContents->updateGeometry();
+//    ui->scrollArea_InventoryItems->updateGeometry();
+//    ui->tab_inventoryOverview->updateGeometry();
+}
+
+void MainWindow::deleteItemFromInventory(QString ID)
+{
+    qDebug() << "delete Item: " << ID;
+    QSqlQuery query;
+    query.prepare("DELETE FROM Inventory WHERE ObjectID = :objectid");
+    query.bindValue(":objectid", ID);
+
+    if(!query.exec())
+    {
+        //qDebug() << query.lastError().text();
+        QMessageBox::critical(this, "Error", query.lastError().text());
+    }
+}
 
 
 // Tab "Add Inventory"
@@ -135,11 +292,12 @@ void MainWindow::on_pushButton_inventorySave_clicked()
     takeImage();
 
     QSqlQuery query;
-    query.prepare("INSERT INTO Inventory (ObjectName, ObjectID, Manufacturer, StorageRoom) VALUES (:objectname, :objectid, :manufacturer, :storageroom)");
+    query.prepare("INSERT INTO Inventory (ObjectName, ObjectID, Manufacturer, StorageRoom, Description) VALUES (:objectname, :objectid, :manufacturer, :storageroom, :description)");
 
     query.bindValue(":objectname", ui->lineEdit_objectName->text() );
     query.bindValue(":objectid", ui->lineEdit_objectID->text() );
     query.bindValue(":manufacturer", ui->lineEdit_objectManufacturer->text() );
+    query.bindValue(":description", ui->lineEdit_itemDescription->text());
     query.bindValue(":storageroom", ui->comboBox_storageRoom->currentText() );
 
     if(query.exec())
@@ -169,7 +327,6 @@ void MainWindow::on_pushButton_inventoryClear_clicked()
 
 void MainWindow::on_lineEdit_objectName_textChanged()
 {
-    qDebug()<< "change";
     ui->label_InventoryAdd_Info->setText("");
 }
 
@@ -202,6 +359,10 @@ void MainWindow::setCamera(const QCameraInfo &cameraInfo)
     connect(m_imageCapture.data(), QOverload<int, QCameraImageCapture::Error, const QString&>::of(&QCameraImageCapture::error),this, &MainWindow::displayCaptureError);
 
     m_camera->start();
+
+    m_imageSettings.setResolution(1920,1080);
+    m_imageSettings.setQuality(QMultimedia::HighQuality);
+    m_imageCapture->setEncodingSettings(m_imageSettings);
 
 }
 
@@ -266,14 +427,12 @@ void MainWindow::dragLeaveEvent(QDragLeaveEvent *event)
 
 
 // others:
-//void MainWindow::loadImageFile(const QString &filename)
-//{
-//    QImageReader imageReader(filename);
-//    const QImage image = imageReader.read();
-//    QFileInfo qi(filename);
-//    imageFilename = qi.fileName();
-//    setImage(image);
-//}
+QImage MainWindow::loadImageFile(const QString &filename)
+{
+    QImageReader imageReader(filename);
+    const QImage image = imageReader.read();
+    return image;
+}
 
 //void MainWindow::setImage(const QImage &newImage)
 //{
@@ -285,34 +444,10 @@ void MainWindow::dragLeaveEvent(QDragLeaveEvent *event)
 
 // unsorted:
 
-void MainWindow::on_pushButton_overviewInventory_Reload_clicked()
-{
-    clearInventoryOverview();
-
-    QSqlQuery query("SELECT * FROM Inventory");
-
-    while(query.next())
-    {
-        QString objectName = query.value("ObjectName").toString();
-        QString objectID = query.value("ObjectID").toString();
-        QString manufacturer = query.value("Manufacturer").toString();
-        QString storageRoom = query.value("StorageRoom").toString();
-        qDebug() << objectName << objectID << manufacturer << storageRoom;
-
-        InventoryWidget* inventorywidget = new InventoryWidget();
-        inventorywidget->setItemName(objectName);
-        inventorywidget->setItemID(objectID);
-        inventorywidget->setItemManufacturer(manufacturer);
-        inventorywidget->setMainWindow(this);
-
-        ui->scrollAreaLayout->addWidget(inventorywidget);
-    }
-
-}
 
 void MainWindow::on_pushButton_openDialog_clicked()
 {
-    QMessageBox::information(this, "info", "beer is empty");
+    QMessageBox::information(this, "info", "a dialog!");
 }
 
 void MainWindow::createButton()
@@ -321,7 +456,7 @@ void MainWindow::createButton()
     QPushButton* myButton = new QPushButton("test", this);
     myButton->setText("dialog box");
     connect(myButton, SIGNAL(clicked()), this, SLOT(showMessage()));
-    ui->horizontalLayout->addWidget(myButton);
+    //ui->horizontalLayout->addWidget(myButton);
 }
 
 void MainWindow::showMessage()
@@ -329,43 +464,5 @@ void MainWindow::showMessage()
     QMessageBox::information(this, "info2", "dialog from dynamic button");
 }
 
-void MainWindow::clearInventoryOverview()
-{
-    qDebug() << ui->scrollAreaLayout->count();
-    if(ui->scrollAreaLayout->count() <= 0) return;
 
-//    for(int i = ui->scrollAreaLayout->count(); i >= 0 ; --i) {
-//       ui->scrollAreaLayout->removeItem(ui->scrollAreaLayout->itemAt(i));
-//       //delete ui->scrollAreaLayout->itemAt(i);
-//    }
 
-    QLayoutItem* child;
-    while( (child = ui->scrollAreaLayout->takeAt(0)) != 0) {
-        child->widget()->setHidden(true);
-        child->widget()->deleteLater();
-        //delete child;
-    }
-
-//    ui->scrollAreaLayout->update();
-//    ui->scrollAreaWidgetContents->updateGeometry();
-//    ui->scrollArea_InventoryItems->updateGeometry();
-//    ui->tab_inventoryOverview->updateGeometry();
-}
-
-void MainWindow::on_pushButton_temp_clicked() {
-    clearInventoryOverview();
-}
-
-void MainWindow::deleteItemFromInventory(QString ID)
-{
-    qDebug() << "delete Item: " << ID;
-    QSqlQuery query;
-    query.prepare("DELETE FROM Inventory WHERE ObjectID = :objectid");
-    query.bindValue(":objectid", ID);
-
-    if(!query.exec())
-    {
-        //qDebug() << query.lastError().text();
-        QMessageBox::critical(this, "Error", query.lastError().text());
-    }
-}
