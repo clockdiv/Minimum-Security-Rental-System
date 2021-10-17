@@ -35,6 +35,8 @@ private:
     QScopedPointer<QCameraImageCapture> m_imageCapture;
     QImageEncoderSettings m_imageSettings;
 
+    QMap<int, int> nameListDatabaseIDs;
+
 
     void dropEvent(QDropEvent* event);
     void dragEnterEvent(QDragEnterEvent* event);
@@ -53,6 +55,7 @@ private slots:
     void on_pushButton_addUser_clicked();
     void on_lineEdit_userName_textChanged();
     void on_listView_users_doubleClicked(QModelIndex);
+
     // Tab "Reservation"
     // =========================
 

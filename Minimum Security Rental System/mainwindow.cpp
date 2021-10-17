@@ -75,6 +75,8 @@ MainWindow::MainWindow(QWidget *parent)
     nameListModel = new QStringListModel(this);
     ui->listView_users->setModel(nameListModel);
 
+    ui->calendarWidget_RentalStart->setSelectedDate(QDateTime::currentDateTime().date());
+    ui->calendarWidget_RentalEnd->setSelectedDate(QDateTime::currentDateTime().date().addDays(7));
 
 }
 
@@ -110,12 +112,9 @@ void MainWindow::on_tabWidget_tabBarClicked(int tabID)
             break;
         case 3:
             if(!m_camera.isNull()) m_camera->stop();
-            break;
-        case 4:
-            if(!m_camera.isNull()) m_camera->stop();
             on_pushButton_overviewInventory_Reload_clicked();
             break;
-        case 5:
+        case 4:
             setCamera(QCameraInfo::defaultCamera());
             break;
         default:
@@ -150,6 +149,7 @@ void MainWindow::on_lineEdit_userName_textChanged()
 {
     QString userName = ui->lineEdit_userName->text();
     nameList.clear();
+    nameListDatabaseIDs.clear();
 
     if (userName == "") {
         nameListModel->setStringList(nameList);
@@ -166,6 +166,7 @@ void MainWindow::on_lineEdit_userName_textChanged()
     else
     {
         while(query.next()) {
+            nameListDatabaseIDs.insert(nameList.count(), query.value("ID").toInt());
             QString entry = query.value("Name").toString() + " "
                             + query.value("Surname").toString() + ", "
                             + query.value("Department").toString();
@@ -177,7 +178,25 @@ void MainWindow::on_lineEdit_userName_textChanged()
 
 void MainWindow::on_listView_users_doubleClicked(QModelIndex index)
 {
-    qDebug() << "double clicked " << index ;
+    qDebug() << "double clicked " << index;
+    qDebug() << "database id: " << nameListDatabaseIDs[index.row()];
+
+    QSqlQuery query;
+    query.prepare("SELECT * FROM Users WHERE ID = :id");
+    query.bindValue(":id", nameListDatabaseIDs[index.row()]);
+    if(!query.exec())
+    {
+       qDebug() << "Error: " << query.lastError().text();
+    }
+    else
+    {
+        query.next();
+        ui->lineEdit_userName->setText(query.value("Name").toString());
+        ui->lineEdit_userSurname->setText(query.value("Surname").toString());
+        ui->lineEdit_userEmail->setText(query.value("Email").toString());
+        ui->spinBox_userYear->setValue(query.value("Year").toInt());
+        ui->comboBox_userDepartment->setCurrentText(query.value("Department").toString());
+    }
 
 }
 
