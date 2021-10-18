@@ -55,6 +55,8 @@ private slots:
     void on_pushButton_addUser_clicked();
     void on_lineEdit_userName_textChanged();
     void on_listView_users_doubleClicked(QModelIndex);
+    void on_lineEdit_rentalSearchItem_textChanged();
+    void clearInventorySearchResults();
 
     // Tab "Reservation"
     // =========================

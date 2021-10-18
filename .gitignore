@@ -2,6 +2,7 @@
 inventory.sqlite
 rental.sqlite
 users.sqlite
+*.jpg
 
 # C++ objects and libs
 *.slo

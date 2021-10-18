@@ -1,20 +1,20 @@
-#ifndef INVENTORYWIDGET_H
-#define INVENTORYWIDGET_H
+#ifndef INVENTORYWIDGETSMALL_H
+#define INVENTORYWIDGETSMALL_H
 
 #include <QWidget>
 #include "mainwindow.h"
 
+namespace Ui {
+class InventoryWidgetSmall;
+}
 
-QT_BEGIN_NAMESPACE
-namespace Ui { class InventoryWidget; }
-QT_END_NAMESPACE
-
-class InventoryWidget : public QWidget
+class InventoryWidgetSmall : public QWidget
 {
     Q_OBJECT
+
 public:
-    InventoryWidget(QWidget *parent = nullptr);
-    ~InventoryWidget();
+    explicit InventoryWidgetSmall(QWidget *parent = nullptr);
+    ~InventoryWidgetSmall();
     void setItemName(const QString& name);
     void setItemID(const QString& id);
     void setItemDescription(const QString& description);
@@ -24,15 +24,12 @@ public:
 
 
 private:
-    Ui::InventoryWidget *ui;
+    Ui::InventoryWidgetSmall *ui;
     MainWindow* mainWindow;
 
 private slots:
-    void on_pushButton_delete_clicked();
-
-
-signals:
+    void on_pushButton_InventoryItemSmallAdd_clicked();
 
 };
 
-#endif // INVENTORYWIDGET_H
+#endif // INVENTORYWIDGETSMALL_H

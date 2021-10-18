@@ -16,6 +16,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "InventoryWidget.h"
+#include "InventoryWidgetSmall.h"
 #include "settings.h"
 
 
@@ -200,6 +201,59 @@ void MainWindow::on_listView_users_doubleClicked(QModelIndex index)
 
 }
 
+void MainWindow::on_lineEdit_rentalSearchItem_textChanged()
+{
+    clearInventorySearchResults();
+
+    QString searchItem = ui->lineEdit_rentalSearchItem->text();
+    if (searchItem.length() < 1) {
+        return;
+    }
+
+    QSqlQuery query;
+    query.prepare("SELECT * FROM Inventory WHERE (ObjectID LIKE :keyword) OR (ObjectName LIKE :keyword) OR (Manufacturer LIKE :keyword)");
+    query.bindValue(":keyword", "%" + searchItem + "%");
+
+    if(!query.exec())
+    {
+       qDebug() << "Error: " << query.lastError().text();
+    }
+    else
+    {
+        //uint16_t i = 0;
+        while(query.next()) {
+            QString objectName = query.value("ObjectName").toString();
+            QString objectID = query.value("ObjectID").toString();
+            QString manufacturer = query.value("Manufacturer").toString();
+            QString description = query.value("Description").toString();
+            QString storageRoom = query.value("StorageRoom").toString();
+            QString filename = dataDirectory + "img/" + objectID + ".jpg";
+
+            InventoryWidgetSmall* inventoryWidgetSmall = new InventoryWidgetSmall();
+            inventoryWidgetSmall->setItemName(QString(manufacturer + " " + objectName));
+            inventoryWidgetSmall->setItemID(objectID);
+            inventoryWidgetSmall->setItemDescription(description);
+            QImage image = loadImageFile(filename);
+            if(image.data_ptr() != NULL) {
+                inventoryWidgetSmall->setImage(image);
+            }
+            //if(i%2==0) inventoryWidgetSmall->setBackgroundDark();
+            //i++;
+            inventoryWidgetSmall->setMainWindow(this);
+            ui->scrollAreaLayout_SearchItem->addWidget(inventoryWidgetSmall);
+        }
+    }
+}
+
+void MainWindow::clearInventorySearchResults()
+{
+    if(ui->scrollAreaLayout_SearchItem->count() <= 0) return;
+    QLayoutItem* child;
+    while( (child = ui->scrollAreaLayout_SearchItem->takeAt(0)) != 0) {
+        child->widget()->setHidden(true);
+        child->widget()->deleteLater();
+    }
+}
 
 // Tab "Reservation"
 // =========================
