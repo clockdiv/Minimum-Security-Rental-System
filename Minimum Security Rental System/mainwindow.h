@@ -19,6 +19,7 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
     void deleteItemFromInventory(QString ID);
+    void addItemToRental(QString ID);
 
 private:
     Ui::MainWindow *ui;
@@ -30,6 +31,10 @@ private:
 
     QStringListModel* nameListModel;
     QStringList nameList;
+    QStringList itemRentalList;
+    int userID;
+
+    QString lastSearchItemID;
 
     QScopedPointer<QCamera> m_camera;
     QScopedPointer<QCameraImageCapture> m_imageCapture;
@@ -52,11 +57,13 @@ private slots:
 
     // Tab "Rental"
     // =========================
-    void on_pushButton_addUser_clicked();
+    void addUser();
     void on_lineEdit_userName_textChanged();
     void on_listView_users_doubleClicked(QModelIndex);
     void on_lineEdit_rentalSearchItem_textChanged();
+    void on_lineEdit_rentalSearchItem_returnPressed();
     void clearInventorySearchResults();
+    void on_pushButton_rentalSave_clicked();
 
     // Tab "Reservation"
     // =========================

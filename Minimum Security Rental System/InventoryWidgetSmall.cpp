@@ -15,8 +15,14 @@ InventoryWidgetSmall::~InventoryWidgetSmall()
 
 void InventoryWidgetSmall::on_pushButton_InventoryItemSmallAdd_clicked()
 {
-    //QString objectID = ui->label_inventoryItemSmall_ID->text();
-    //mainWindow->deleteItemFromInventory(objectID);
+    QString objectID = ui->label_inventoryItemSmall_ID->text();
+    mainWindow->addItemToRental(objectID);
+}
+
+void InventoryWidgetSmall::on_pushButton_InventoryItemSmallRemove_clicked()
+{
+    this->deleteLater();
+
 }
 
 void InventoryWidgetSmall::setItemName(const QString& name)
@@ -50,3 +56,18 @@ void InventoryWidgetSmall::setMainWindow(MainWindow* mw)
 {
     mainWindow = mw;
 }
+
+void InventoryWidgetSmall::removeAddButton()
+{
+    ui->pushButton_InventoryItemSmallAdd->deleteLater();
+}
+
+void InventoryWidgetSmall::removeRemoveButton()
+{
+    ui->pushButton_InventoryItemSmallRemove->deleteLater();
+}
+
+//QString InventoryWidgetSmall::getObjectID()
+//{
+//    return this->ui->label_inventoryItemSmall_ID->text();
+//}

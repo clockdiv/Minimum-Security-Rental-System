@@ -17,6 +17,7 @@ void InventoryWidget::on_pushButton_delete_clicked()
 {
     QString objectID = ui->label_inventoryItem_ID->text();
     mainWindow->deleteItemFromInventory(objectID);
+    this->deleteLater();
 }
 
 void InventoryWidget::setItemName(const QString& name)

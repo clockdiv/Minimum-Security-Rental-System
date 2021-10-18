@@ -19,8 +19,12 @@ public:
     void setItemID(const QString& id);
     void setItemDescription(const QString& description);
     void setImage(const QImage& image);
+
     void setBackgroundDark();
     void setMainWindow(MainWindow* mw);
+    void removeAddButton();
+    void removeRemoveButton();
+//    QString getObjectID();
 
 
 private:
@@ -29,6 +33,7 @@ private:
 
 private slots:
     void on_pushButton_InventoryItemSmallAdd_clicked();
+    void on_pushButton_InventoryItemSmallRemove_clicked();
 
 };
 
