@@ -20,6 +20,7 @@ public:
     ~MainWindow();
     void deleteItemFromInventory(QString ID);
     void addItemToRental(QString ID);
+    void removeItemFromRental(QString ID);
 
 private:
     Ui::MainWindow *ui;
@@ -28,6 +29,7 @@ private:
     QString filename_db = dataDirectory + "inventory.sqlite";
 
     QImage itemImage;
+    int statusBarTimeout = 4000;
 
     QStringListModel* nameListModel;
     QStringList nameList;
@@ -57,7 +59,7 @@ private slots:
 
     // Tab "Rental"
     // =========================
-    void addUser();
+    int addUser();
     void on_lineEdit_userName_textChanged();
     void on_listView_users_doubleClicked(QModelIndex);
     void on_lineEdit_rentalSearchItem_textChanged();
@@ -86,9 +88,6 @@ private slots:
 //    void on_pushButton_loadPicture_clicked();
     void on_pushButton_inventorySave_clicked();
     void on_pushButton_inventoryClear_clicked();
-    void on_lineEdit_objectName_textChanged();
-    void on_lineEdit_objectManufacturer_textChanged();
-    void on_lineEdit_objectID_textChanged();
 
     // methods for camera:
     void setCamera(const QCameraInfo &cameraInfo);

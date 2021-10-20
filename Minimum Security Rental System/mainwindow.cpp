@@ -127,7 +127,7 @@ void MainWindow::on_tabWidget_tabBarClicked(int tabID)
 // Tab "Rental"
 // =========================
 
-void MainWindow::addUser()
+int MainWindow::addUser()
 {
     QSqlQuery query;
 
@@ -140,7 +140,9 @@ void MainWindow::addUser()
 
     if(!query.exec()) {
         QMessageBox::critical(this, "SQL-Error: ", query.lastError().text());
+        return -1;
     }
+    return query.lastInsertId().toInt();
 }
 
 void MainWindow::on_lineEdit_userName_textChanged()
@@ -149,9 +151,10 @@ void MainWindow::on_lineEdit_userName_textChanged()
     QString userName = ui->lineEdit_userName->text();
     nameList.clear();
     nameListDatabaseIDs.clear();
+    nameListModel->setStringList(nameList);
 
-    if (userName == "") {
-        nameListModel->setStringList(nameList);
+    if (userName == "")
+    {
         return;
     }
 
@@ -219,7 +222,6 @@ void MainWindow::on_lineEdit_rentalSearchItem_textChanged()
     }
     else
     {
-        //uint16_t i = 0;
         while(query.next()) {
             QString objectName = query.value("ObjectName").toString();
             QString objectID = query.value("ObjectID").toString();
@@ -237,10 +239,12 @@ void MainWindow::on_lineEdit_rentalSearchItem_textChanged()
             if(image.data_ptr() != NULL) {
                 inventoryWidgetSmall->setImage(image);
             }
-            //if(i%2==0) inventoryWidgetSmall->setBackgroundDark();
-            //i++;
+
             inventoryWidgetSmall->setMainWindow(this);
             ui->scrollAreaLayout_SearchItem->addWidget(inventoryWidgetSmall);
+
+            if(itemRentalList.indexOf(objectID) > -1)
+                inventoryWidgetSmall->setDisabled(true);
 
             lastSearchItemID = objectID;
         }
@@ -300,6 +304,12 @@ void MainWindow::addItemToRental(QString ID)
 
 }
 
+void MainWindow::removeItemFromRental(QString ID) {
+    int index = itemRentalList.lastIndexOf(ID);
+    itemRentalList.removeAt(index);
+    on_lineEdit_rentalSearchItem_textChanged();
+}
+
 void MainWindow::on_lineEdit_rentalSearchItem_returnPressed()
 {
     if(ui->scrollAreaLayout_SearchItem->count() == 1){
@@ -312,9 +322,7 @@ void MainWindow::on_pushButton_rentalSave_clicked()
 {
     if(userID < 0)
     {
-        addUser();
-        // todo: get userID from freshly added user!
-        return;
+        userID = addUser();
     }
 
     QString itemlist = "";
@@ -325,16 +333,17 @@ void MainWindow::on_pushButton_rentalSave_clicked()
     }
 
     QSqlQuery query;
-    query.prepare("INSERT INTO Rentals (UserID, Itemlist, DateBegin, DateEnd) VALUES (:userid, :itemlist, :datebegin, :dateend)");
+    query.prepare("INSERT INTO Rentals (UserID, Itemlist, DateBegin, DateEnd, Comment) VALUES (:userid, :itemlist, :datebegin, :dateend, :comment)");
     query.bindValue(":userid", userID);
     query.bindValue(":itemlist", itemlist);
     query.bindValue(":datebegin", ui->calendarWidget_RentalStart->selectedDate().toString());
     query.bindValue(":dateend", ui->calendarWidget_RentalEnd->selectedDate().toString());
+    query.bindValue(":comment", ui->lineEdit_rentalComment->text());
 
     if(!query.exec()) {
         QMessageBox::critical(this, "SQL-Error: ", query.lastError().text());
     } else {
-        ui->label_Info->setText("👍 Rental saved to minimum security database.");
+        ui->statusbar->showMessage("👍 Rental saved to minimum security database.", statusBarTimeout);
     }
 }
 
@@ -438,11 +447,11 @@ void MainWindow::deleteItemFromInventory(QString ID)
 void MainWindow::on_pushButton_inventorySave_clicked()
 {
     if (ui->lineEdit_objectName->text() == ""){
-        ui->label_Info->setText("👎 Not cool. Please name the object.");
+        ui->statusbar->showMessage("👎 Not cool. Please name the object.", statusBarTimeout);
         return;
     }
     else if (ui->lineEdit_objectID->text() == ""){
-        ui->label_Info->setText("👎 Not cool. No Object ID given.");
+        ui->statusbar->showMessage("👎 Not cool. No Object ID given.", statusBarTimeout);
         return;
     }
 
@@ -459,18 +468,15 @@ void MainWindow::on_pushButton_inventorySave_clicked()
 
     if(query.exec())
     {
-        //QMessageBox::information(this, "Inventar", "Inventar sicher gespeichert.");
-        ui->label_Info->setText("👍 Supercool! Inventory is stored 'securely'.");
+        ui->statusbar->showMessage("👍 Supercool! Inventory is stored 'securely'.", statusBarTimeout);
     }
     else if(query.lastError().nativeErrorCode() == "19")
     {
-        ui->label_Info->setText("💥 Error: ObjectID already in use.");
-        //QMessageBox::critical(this, "Inventar", "Fehler: ObjectID bereits vergeben.");
+        QMessageBox::critical(this, "💥 Error", "💥 Error: ObjectID already in use.");
     }
     else
     {
-        ui->label_Info->setText("💥 Error: " + query.lastError().text());
-        //QMessageBox::critical(this, "Inventar", query.lastError().text());
+        QMessageBox::critical(this, "💥 SQL-Error: ", query.lastError().text());
     }
 }
 
@@ -478,26 +484,13 @@ void MainWindow::on_pushButton_inventoryClear_clicked()
 {
     ui->lineEdit_objectName->setText("");
     ui->lineEdit_objectManufacturer->setText("");
+    ui->lineEdit_itemDescription->setText("");
     ui->lineEdit_objectID->setText("");
-    ui->label_Info->setText("");
 }
 
-void MainWindow::on_lineEdit_objectName_textChanged()
-{
-    ui->label_Info->setText("");
-}
 
-void MainWindow::on_lineEdit_objectManufacturer_textChanged()
-{
-    qDebug()<< "change";
-    ui->label_Info->setText("");
-}
 
-void MainWindow::on_lineEdit_objectID_textChanged()
-{
-    qDebug()<< "change";
-    ui->label_Info->setText("");
-}
+
 
 // methods for camera:
 void MainWindow::setCamera(const QCameraInfo &cameraInfo)
@@ -541,8 +534,7 @@ void MainWindow::imageSaved(int id, const QString &fileName)
 
 void MainWindow::displayCaptureError(int id, const QCameraImageCapture::Error error, const QString &errorString)
 {
-    ui->label_Info->setText("capture error" + errorString);
-
+    QMessageBox::critical(this, "Error", "capture error" + errorString);
 }
 
 void MainWindow::takeImage()

@@ -37,7 +37,7 @@ void InventoryWidget::setItemDescription(const QString &description)
 
 void InventoryWidget::setImage(const QImage& image)
 {
-    ui->label_itemImage->setPixmap(QPixmap::fromImage(image));
+    ui->label_itemImage->setPixmap(QPixmap::fromImage(image).scaledToHeight(ui->label_itemImage->height()));
 }
 
 void InventoryWidget::setBackgroundDark()

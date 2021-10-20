@@ -17,17 +17,18 @@ void InventoryWidgetSmall::on_pushButton_InventoryItemSmallAdd_clicked()
 {
     QString objectID = ui->label_inventoryItemSmall_ID->text();
     mainWindow->addItemToRental(objectID);
+    this->setDisabled(true);
 }
 
 void InventoryWidgetSmall::on_pushButton_InventoryItemSmallRemove_clicked()
 {
+    QString objectID = ui->label_inventoryItemSmall_ID->text();
+    mainWindow->removeItemFromRental(objectID);
     this->deleteLater();
-
 }
 
 void InventoryWidgetSmall::setItemName(const QString& name)
 {
-
     ui->label_inventoryItemSmall_name->setText(name);
 }
 
@@ -43,7 +44,7 @@ void InventoryWidgetSmall::setItemDescription(const QString &description)
 
 void InventoryWidgetSmall::setImage(const QImage& image)
 {
-    ui->label_itemSmallImage->setPixmap(QPixmap::fromImage(image));
+    ui->label_itemSmallImage->setPixmap(QPixmap::fromImage(image).scaledToHeight(ui->label_itemSmallImage->height()));
 }
 
 void InventoryWidgetSmall::setBackgroundDark()
