@@ -11,6 +11,7 @@ CONFIG += c++11
 SOURCES += \
     InventoryWidget.cpp \
     InventoryWidgetSmall.cpp \
+    RentalWidget.cpp \
     main.cpp \
     mainwindow.cpp \
     settings.cpp
@@ -18,12 +19,14 @@ SOURCES += \
 HEADERS += \
     InventoryWidget.h \
     InventoryWidgetSmall.h \
+    RentalWidget.h \
     mainwindow.h \
     settings.h
 
 FORMS += \
     InventoryWidget.ui \
     InventoryWidgetSmall.ui \
+    RentalWidget.ui \
     mainwindow.ui \
     settings.ui
 

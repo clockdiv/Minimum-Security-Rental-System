@@ -44,11 +44,21 @@ private:
 
     QMap<int, int> nameListDatabaseIDs;
 
+    struct Item {
+        int ID;
+        QString ObjectName;
+        QString ObjectID;
+        QString Manufacturer;
+        QString StorageRoom;
+        QString Description;
+    };
 
     void dropEvent(QDropEvent* event);
     void dragEnterEvent(QDragEnterEvent* event);
     void dragMoveEvent(QDragMoveEvent* event);
     void dragLeaveEvent(QDragLeaveEvent* event);
+
+    Item getItemFromDatabase(QSqlQuery q);
 
 
 private slots:
@@ -75,6 +85,7 @@ private slots:
 
     // Tab "Overview"
     // =========================
+    void loadRentalOverview();
 
     // Tab "Show Inventory"
     // =========================

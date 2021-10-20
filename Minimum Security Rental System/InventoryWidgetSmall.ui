@@ -10,6 +10,18 @@
     <height>48</height>
    </rect>
   </property>
+  <property name="minimumSize">
+   <size>
+    <width>280</width>
+    <height>0</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>300</width>
+    <height>16777215</height>
+   </size>
+  </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
@@ -94,12 +106,15 @@
           </item>
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_4">
+            <property name="rightMargin">
+             <number>5</number>
+            </property>
             <item>
              <widget class="QLabel" name="label_inventoryItemSmall_ID">
               <property name="font">
                <font>
-                <pointsize>10</pointsize>
-                <italic>true</italic>
+                <pointsize>11</pointsize>
+                <italic>false</italic>
                </font>
               </property>
               <property name="text">
@@ -114,11 +129,14 @@
               </property>
               <property name="font">
                <font>
-                <pointsize>10</pointsize>
+                <pointsize>11</pointsize>
                </font>
               </property>
               <property name="text">
                <string>Description</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
               </property>
              </widget>
             </item>
