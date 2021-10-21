@@ -21,6 +21,7 @@ public:
     void deleteItemFromInventory(QString ID);
     void addItemToRental(QString ID);
     void removeItemFromRental(QString ID);
+    void returnItemFromRental(QString objectID);
 
 private:
     Ui::MainWindow *ui;
@@ -29,7 +30,7 @@ private:
     QString filename_db = dataDirectory + "inventory.sqlite";
 
     QImage itemImage;
-    int statusBarTimeout = 4000;
+    int statusBarTimeout = 2000;
 
     QStringListModel* nameListModel;
     QStringList nameList;
@@ -42,8 +43,6 @@ private:
     QScopedPointer<QCameraImageCapture> m_imageCapture;
     QImageEncoderSettings m_imageSettings;
 
-    QMap<int, int> nameListDatabaseIDs;
-
     struct Item {
         int ID;
         QString ObjectName;
@@ -51,7 +50,32 @@ private:
         QString Manufacturer;
         QString StorageRoom;
         QString Description;
+        int MarkedAsRemoved;
     };
+
+    struct User {
+        int ID;
+        QString Name;
+        QString Surname;
+        QString Department;
+        int Year;
+        QString Email;
+    };
+
+    struct Rental {
+        int ID;
+        int UserID;
+        QStringList Itemlist;
+        QStringList ItemlistReturn;
+        QDate DateBegin;
+        QDate DateEnd;
+        QString Comment;
+    };
+
+    QMap<int, int> nameListDatabaseIDs;
+    QList<int> rentalFilterList;
+
+    QList<Rental> allRentals;
 
     void dropEvent(QDropEvent* event);
     void dragEnterEvent(QDragEnterEvent* event);
@@ -59,6 +83,8 @@ private:
     void dragLeaveEvent(QDragLeaveEvent* event);
 
     Item getItemFromDatabase(QSqlQuery q);
+    User getUserFromDatabase(QSqlQuery q);
+    Rental getRentalFromDatabase(QSqlQuery q);
 
 
 private slots:
@@ -76,6 +102,8 @@ private slots:
     void on_lineEdit_rentalSearchItem_returnPressed();
     void clearInventorySearchResults();
     void on_pushButton_rentalSave_clicked();
+    void on_calendarWidget_RentalStart_selectionChanged();
+    void on_calendarWidget_RentalEnd_selectionChanged();
 
     // Tab "Reservation"
     // =========================
@@ -85,7 +113,14 @@ private slots:
 
     // Tab "Overview"
     // =========================
-    void loadRentalOverview();
+    void loadRentalOverview(const QList<int>& rentalFilterList);
+    void clearRentalOverview();
+    void on_lineEdit_RentalOverview_textChanged();
+    QList<int> searchByUser(QString searchString);
+    QList<int> searchByItemID(QString searchString);
+    int getRentalIDfromObjectID(QString objectID);
+    void loadAllRentals();
+
 
     // Tab "Show Inventory"
     // =========================

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>753</width>
-    <height>763</height>
+    <width>860</width>
+    <height>780</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -36,7 +36,7 @@
        <enum>QTabWidget::Rounded</enum>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab_rental">
        <property name="enabled">
@@ -277,8 +277,8 @@
                 <rect>
                  <x>0</x>
                  <y>0</y>
-                 <width>332</width>
-                 <height>120</height>
+                 <width>386</width>
+                 <height>137</height>
                 </rect>
                </property>
                <layout class="QVBoxLayout" name="verticalLayout_9">
@@ -343,8 +343,8 @@
                 <rect>
                  <x>0</x>
                  <y>0</y>
-                 <width>332</width>
-                 <height>121</height>
+                 <width>385</width>
+                 <height>138</height>
                 </rect>
                </property>
                <layout class="QVBoxLayout" name="verticalLayout_10">
@@ -460,7 +460,7 @@
           <item row="0" column="0">
            <widget class="QLabel" name="label_12">
             <property name="text">
-             <string>Search</string>
+             <string>Search name or ID</string>
             </property>
            </widget>
           </item>
@@ -479,8 +479,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>681</width>
-             <height>598</height>
+             <width>804</width>
+             <height>606</height>
             </rect>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_12">
@@ -540,7 +540,7 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>687</width>
+               <width>794</width>
                <height>568</height>
               </rect>
              </property>
@@ -772,7 +772,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>753</width>
+     <width>860</width>
      <height>24</height>
     </rect>
    </property>

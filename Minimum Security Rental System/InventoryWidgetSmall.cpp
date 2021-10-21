@@ -27,6 +27,22 @@ void InventoryWidgetSmall::on_pushButton_InventoryItemSmallRemove_clicked()
     this->deleteLater();
 }
 
+void InventoryWidgetSmall::on_pushButton_InventoryItemSmallReturn_clicked()
+{
+    QString objectID = ui->label_inventoryItemSmall_ID->text();
+    mainWindow->returnItemFromRental(objectID);
+    setReturned();
+}
+
+void InventoryWidgetSmall::setReturned()
+{
+    ui->label_itemSmallImage->setDisabled(true);
+    ui->label_inventoryItemSmall_ID->setDisabled(true);
+    ui->label_inventoryItemSmall_description->setDisabled(true);
+    ui->label_inventoryItemSmall_name->setDisabled(true);
+    ui->pushButton_InventoryItemSmallReturn->setDisabled(true);
+}
+
 void InventoryWidgetSmall::setItemName(const QString& name)
 {
     ui->label_inventoryItemSmall_name->setText(name);
@@ -66,6 +82,11 @@ void InventoryWidgetSmall::removeAddButton()
 void InventoryWidgetSmall::removeRemoveButton()
 {
     ui->pushButton_InventoryItemSmallRemove->deleteLater();
+}
+
+void InventoryWidgetSmall::removeReturnButton()
+{
+    ui->pushButton_InventoryItemSmallReturn->deleteLater();
 }
 
 //QString InventoryWidgetSmall::getObjectID()

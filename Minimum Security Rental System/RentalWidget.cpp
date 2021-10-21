@@ -20,18 +20,25 @@ void RentalWidget::setData(const QString& name, const QString& surname, const QS
     ui->label_rentalWidget_comment->setText(comment);
 }
 
-void RentalWidget::addItem(const QString& objectName, const QString& objectID, const QString& manufacturer, const QString& description, const QImage &image)
+void RentalWidget::addItem(const QString& objectName, const QString& objectID, const QString& manufacturer, const QString& description, const QImage &image, bool isReturned)
 {
     InventoryWidgetSmall* inventorywidget = new InventoryWidgetSmall();
     inventorywidget->setItemName(manufacturer + " " + objectName);
     inventorywidget->setItemID(objectID);
     inventorywidget->setItemDescription(description);
+    inventorywidget->setMainWindow(mainWindow);
+
     if(!image.isNull()) {
         inventorywidget->setImage(image);
     }
 
     inventorywidget->removeAddButton();
     inventorywidget->removeRemoveButton();
+
+    if(isReturned)
+    {
+        inventorywidget->setReturned();
+    }
     ui->verticalLayout_rentals->addWidget(inventorywidget);
 }
 
@@ -43,4 +50,9 @@ void RentalWidget::setStartDate(const QString& date)
 void RentalWidget::setEndDate(const QString& date)
 {
     ui->label_rentalWidget_rentalEnd->setText(date);
+}
+
+void RentalWidget::setMainWindow(MainWindow* mw)
+{
+    mainWindow = mw;
 }

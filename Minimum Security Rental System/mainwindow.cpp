@@ -80,11 +80,9 @@ MainWindow::MainWindow(QWidget *parent)
     ui->calendarWidget_RentalStart->setSelectedDate(QDateTime::currentDateTime().date());
     ui->calendarWidget_RentalEnd->setSelectedDate(QDateTime::currentDateTime().date().addDays(7));
 
-qDebug() << ui->calendarWidget_RentalStart->selectedDate().toString();
-QString d = ui->calendarWidget_RentalStart->selectedDate().toString(Qt::ISODate);
-qDebug() << d;
-QDate _d = QDate::fromString(d, Qt::ISODate);
-qDebug() << _d.toString(Qt::LocaleDate);
+    loadAllRentals();
+    on_lineEdit_rentalSearchItem_textChanged();
+
 }
 
 MainWindow::~MainWindow()
@@ -106,29 +104,31 @@ void MainWindow::on_actionPreferences_triggered()
 
 void MainWindow::on_tabWidget_tabBarClicked(int tabID)
 {
+    loadAllRentals();
     switch (tabID)
     {
-        case 0:
+        case 0:     // Rental
             if(!m_camera.isNull()) m_camera->stop();
+            on_lineEdit_rentalSearchItem_textChanged();
             break;
         case 1:
             if(!m_camera.isNull()) m_camera->stop();
             break;
-        case 2:
+        case 2:     // Rental Overview
             if(!m_camera.isNull()) m_camera->stop();
-            loadRentalOverview();
+            clearRentalOverview();
+            loadRentalOverview(rentalFilterList);
             break;
-        case 3:
+        case 3:     // Show Inventory
             if(!m_camera.isNull()) m_camera->stop();
             on_pushButton_overviewInventory_Reload_clicked();
             break;
-        case 4:
+        case 4:     // Add Inventory
             setCamera(QCameraInfo::defaultCamera());
             break;
         default:
             break;
     }
-
 }
 
 MainWindow::Item MainWindow::getItemFromDatabase(QSqlQuery q)
@@ -142,8 +142,40 @@ MainWindow::Item MainWindow::getItemFromDatabase(QSqlQuery q)
     i.ObjectID = q.value("ObjectID").toString();
     i.Description = q.value("Description").toString();
     i.StorageRoom = q.value("StorageRoom").toString();
+    i.MarkedAsRemoved = q.value("MarkedAsRemoved").toInt();
 
     return i;
+}
+
+MainWindow::User MainWindow::getUserFromDatabase(QSqlQuery q)
+{
+    MainWindow::User u;
+    u.ID = -1;
+
+    u.ID = q.value("ID").toInt();
+    u.Name = q.value("Name").toString();
+    u.Surname = q.value("Surname").toString();
+    u.Department = q.value("Department").toString();
+    u.Email = q.value("Email").toString();
+    u.Year = q.value("Year").toInt();
+
+    return u;
+}
+
+MainWindow::Rental MainWindow::getRentalFromDatabase(QSqlQuery q)
+{
+    MainWindow::Rental r;
+    r.ID = -1;
+
+    r.ID = q.value("ID").toInt();
+    r.UserID = q.value("UserID").toInt();
+    if(q.value("Itemlist").toString() != "") r.Itemlist = q.value("Itemlist").toString().split(",");
+    if(q.value("ItemlistReturn").toString() != "") r.ItemlistReturn = q.value("ItemlistReturn").toString().split(",");
+    r.DateBegin = QDate::fromString(q.value("DateBegin").toString(), Qt::ISODate);
+    r.DateEnd = QDate::fromString(q.value("DateEnd").toString(), Qt::ISODate);
+    r.Comment = q.value("Comment").toString();
+
+    return r;
 }
 
 
@@ -191,10 +223,9 @@ void MainWindow::on_lineEdit_userName_textChanged()
     else
     {
         while(query.next()) {
-            nameListDatabaseIDs.insert(nameList.count(), query.value("ID").toInt());
-            QString entry = query.value("Name").toString() + " "
-                            + query.value("Surname").toString() + ", "
-                            + query.value("Department").toString();
+            MainWindow::User u = getUserFromDatabase(query);
+            nameListDatabaseIDs.insert(nameList.count(), u.ID);
+            QString entry = u.Name + " " +u.Surname + " " + u.Department;
             nameList.append(entry);
             nameListModel->setStringList(nameList);
         }
@@ -231,9 +262,6 @@ void MainWindow::on_lineEdit_rentalSearchItem_textChanged()
     clearInventorySearchResults();
 
     QString searchItem = ui->lineEdit_rentalSearchItem->text();
-//    if (searchItem.length() < 1) {
-//        return;
-//    }
 
     QSqlQuery query;
     query.prepare("SELECT * FROM Inventory WHERE (ObjectID LIKE :keyword) OR (ObjectName LIKE :keyword) OR (Manufacturer LIKE :keyword)");
@@ -247,24 +275,38 @@ void MainWindow::on_lineEdit_rentalSearchItem_textChanged()
     {
         while(query.next()) {
             MainWindow::Item i = getItemFromDatabase(query);
+            if (i.MarkedAsRemoved) continue;
 
             QString filename = dataDirectory + "img/" + i.ObjectID + ".jpg";
 
             InventoryWidgetSmall* inventoryWidgetSmall = new InventoryWidgetSmall();
+            inventoryWidgetSmall->setMainWindow(this);
+            inventoryWidgetSmall->setMaximumWidth(65535);
             inventoryWidgetSmall->setItemName(QString(i.Manufacturer + " " + i.ObjectName));
             inventoryWidgetSmall->setItemID(i.ObjectID);
             inventoryWidgetSmall->setItemDescription(i.Description);
             inventoryWidgetSmall->removeRemoveButton();
+            inventoryWidgetSmall->removeReturnButton();
             QImage image = loadImageFile(filename);
             if(image.data_ptr() != NULL) {
                 inventoryWidgetSmall->setImage(image);
             }
-
-            inventoryWidgetSmall->setMainWindow(this);
             ui->scrollAreaLayout_SearchItem->addWidget(inventoryWidgetSmall);
 
+            // disable object if it's in the rental list:
             if(itemRentalList.indexOf(i.ObjectID) > -1)
                 inventoryWidgetSmall->setDisabled(true);
+
+            // disable object if it's already lent.
+            for (MainWindow::Rental r : allRentals)
+            {
+                if(r.Itemlist.contains(i.ObjectID) && !r.ItemlistReturn.contains(i.ObjectID))
+                {
+                    inventoryWidgetSmall->setDisabled(true);
+                }
+            }
+
+
 
             lastSearchItemID = i.ObjectID;
         }
@@ -305,10 +347,13 @@ void MainWindow::addItemToRental(QString ID)
             QString filename = dataDirectory + "img/" + objectID + ".jpg";
 
             InventoryWidgetSmall* inventoryWidgetSmall = new InventoryWidgetSmall();
+            inventoryWidgetSmall->setMaximumWidth(65535);
             inventoryWidgetSmall->setItemName(QString(manufacturer + " " + objectName));
             inventoryWidgetSmall->setItemID(objectID);
             inventoryWidgetSmall->setItemDescription(description);
             inventoryWidgetSmall->removeAddButton();
+            inventoryWidgetSmall->removeReturnButton();
+
             QImage image = loadImageFile(filename);
             if(image.data_ptr() != NULL) {
                 inventoryWidgetSmall->setImage(image);
@@ -342,12 +387,8 @@ void MainWindow::on_pushButton_rentalSave_clicked()
         userID = addUser();
     }
 
-    QString itemlist = "";
-    int itemCount = itemRentalList.count();
-    for(int i = 0; i < itemCount; i++) {
-        itemlist += itemRentalList.at(i);
-        if(i < itemCount - 1) itemlist += ",";
-    }
+    itemRentalList.sort();
+    QString itemlist = itemRentalList.join(",");
 
     QSqlQuery query;
     query.prepare("INSERT INTO Rentals (UserID, Itemlist, DateBegin, DateEnd, Comment) VALUES (:userid, :itemlist, :datebegin, :dateend, :comment)");
@@ -362,25 +403,79 @@ void MainWindow::on_pushButton_rentalSave_clicked()
     } else {
         ui->statusbar->showMessage("👍 Rental saved to minimum security database.", statusBarTimeout);
     }
+
+    // Clean up GUI
+    ui->lineEdit_userName->setText("");
+    ui->lineEdit_userSurname->setText("");
+    ui->lineEdit_userEmail->setText("");
+    ui->comboBox_userDepartment->setCurrentIndex(0);
+    ui->spinBox_userYear->setValue(0);
+    ui->lineEdit_rentalComment->setText("");
+
+    ui->calendarWidget_RentalStart->setSelectedDate(QDateTime::currentDateTime().date());
+    ui->calendarWidget_RentalEnd->setSelectedDate(QDateTime::currentDateTime().date().addDays(7));
+
+    ui->lineEdit_rentalSearchItem->setText("");
+
+    itemRentalList.clear();
+    if(ui->scrollAreaLayout_RentalItems->count() > 0)
+    {
+        QLayoutItem* child;
+        while( (child = ui->scrollAreaLayout_RentalItems->takeAt(0)) != 0) {
+            child->widget()->setHidden(true);
+            child->widget()->deleteLater();
+        }
+    }
+
+
 }
 
+void MainWindow::on_calendarWidget_RentalStart_selectionChanged()
+{
+    if (ui->calendarWidget_RentalStart->selectedDate() < QDateTime::currentDateTime().date())
+    {
+        ui->statusbar->showMessage("You live in the past!", statusBarTimeout);
+        ui->calendarWidget_RentalStart->setSelectedDate(QDateTime::currentDateTime().date());
+    }
 
-// Tab "Reservation"
-// =========================
+    if(ui->calendarWidget_RentalEnd->selectedDate() < ui->calendarWidget_RentalStart->selectedDate())
+    {
+        ui->calendarWidget_RentalEnd->setSelectedDate(QDateTime::currentDateTime().date().addDays(7));
+    }
+}
+
+void MainWindow::on_calendarWidget_RentalEnd_selectionChanged()
+{
+    if (ui->calendarWidget_RentalEnd->selectedDate() < ui->calendarWidget_RentalStart->selectedDate())
+    {
+        ui->statusbar->showMessage("Return date must be after rental date", statusBarTimeout);
+        ui->calendarWidget_RentalEnd->setSelectedDate(ui->calendarWidget_RentalStart->selectedDate().addDays(7));
+    }
+}
 
 // Tab "Return"
 // =========================
 
 // Tab "Overview"
 // =========================
-void MainWindow::loadRentalOverview()
+void MainWindow::loadRentalOverview(const QList<int>& rentalFilterList)
 {
-    // todo: clearRentalSearchResults();
-
     QString searchItem = ui->lineEdit_RentalOverview->text();
 
+    QString querystring = "SELECT * FROM Rentals";
+    if(rentalFilterList.count() > 0) {      // if there are search filters, use them; otherwise show all rentals
+        querystring += " WHERE ";
+        for (int i = 0; i < rentalFilterList.count(); i++)
+        {
+            querystring += "(ID=";
+            querystring += QString::number(rentalFilterList.at(i));
+            querystring += ")";
+            if (i < rentalFilterList.count() - 1) querystring += "OR";
+        }
+    }
+    querystring += " ORDER BY ID DESC";
     QSqlQuery query;
-    query.prepare("SELECT * FROM Rentals");
+    query.prepare(querystring);
 
     if(!query.exec())
     {
@@ -389,14 +484,14 @@ void MainWindow::loadRentalOverview()
     else
     {
         while(query.next()) {
-            int userID = query.value("UserID").toInt();
-            QString itemList = query.value("ItemList").toString();
-            QString itemListReturn = query.value("ItemListReturn").toString();
-            QString dateBegin = query.value("DateBegin").toString();
-            dateBegin = QDate::fromString(dateBegin, Qt::ISODate).toString(Qt::LocaleDate);
-            QString dateEnd = query.value("dateEnd").toString();
-            dateEnd = QDate::fromString(dateEnd, Qt::ISODate).toString(Qt::LocaleDate);
-            QString comment = query.value("comment").toString();
+            // get rental from database entry
+            MainWindow::Rental r = getRentalFromDatabase(query);
+            int userID = r.UserID;
+            QStringList itemList = r.Itemlist;
+            QStringList itemListReturn = r.ItemlistReturn;
+            QString dateBegin = r.DateBegin.toString(Qt::ISODate);
+            QString dateEnd = r.DateEnd.toString(Qt::ISODate);
+            QString comment = r.Comment;
 
 
             // get user fromUserID
@@ -414,13 +509,15 @@ void MainWindow::loadRentalOverview()
             else
             {
                 userQuery.next();
-                userName = userQuery.value("Name").toString();
-                userSurname = userQuery.value("Surname").toString();
-                userDepartment = userQuery.value("Department").toString();
+                MainWindow::User u = getUserFromDatabase(userQuery);
+                userName = u.Name;
+                userSurname = u.Surname;
+                userDepartment = u.Department;
             }
 
             // create Rental Widget
             RentalWidget* rentalWidget = new RentalWidget();
+            rentalWidget->setMainWindow(this);
             rentalWidget->setData(userName, userSurname, userDepartment, comment);
             rentalWidget->setStartDate(dateBegin);
             rentalWidget->setEndDate(dateEnd);
@@ -428,8 +525,7 @@ void MainWindow::loadRentalOverview()
 
 
             // get items from ItemList
-            QStringList itemIDs = itemList.split(",");
-            for (const QString &itemID : qAsConst(itemIDs))
+            for (const QString &itemID : qAsConst(itemList))
             {
                 QSqlQuery itemQuery;
                 itemQuery.prepare("SELECT * FROM Inventory WHERE ObjectID = :itemid");
@@ -445,43 +541,187 @@ void MainWindow::loadRentalOverview()
                     QString filename = dataDirectory + "img/" + i.ObjectID + ".jpg";
                     QImage image = loadImageFile(filename);
 
-                    rentalWidget->addItem(i.ObjectName, i.ObjectID, i.Manufacturer, i.Description, image);
+                    rentalWidget->addItem(i.ObjectName, i.ObjectID, i.Manufacturer, i.Description, image, itemListReturn.contains(itemID) || i.MarkedAsRemoved);
+
                 }
-
             }
-
-
-
-
-
-
-//            QString objectName = query.value("ObjectName").toString();
-//            QString objectID = query.value("ObjectID").toString();
-//            QString manufacturer = query.value("Manufacturer").toString();
-//            QString description = query.value("Description").toString();
-//            QString storageRoom = query.value("StorageRoom").toString();
-//            QString filename = dataDirectory + "img/" + objectID + ".jpg";
-
-//            InventoryWidgetSmall* inventoryWidgetSmall = new InventoryWidgetSmall();
-//            inventoryWidgetSmall->setItemName(QString(manufacturer + " " + objectName));
-//            inventoryWidgetSmall->setItemID(objectID);
-//            inventoryWidgetSmall->setItemDescription(description);
-//            inventoryWidgetSmall->removeRemoveButton();
-//            QImage image = loadImageFile(filename);
-//            if(image.data_ptr() != NULL) {
-//                inventoryWidgetSmall->setImage(image);
-//            }
-
-//            inventoryWidgetSmall->setMainWindow(this);
-//            ui->scrollAreaLayout_SearchItem->addWidget(inventoryWidgetSmall);
-
-//            if(itemRentalList.indexOf(objectID) > -1)
-//                inventoryWidgetSmall->setDisabled(true);
-
-//            lastSearchItemID = objectID;
         }
+    }
+}
 
-    }}
+void MainWindow::clearRentalOverview()
+{
+    if(ui->scrollAreaLayout_rentalOverview->count() <= 0) return;
+
+    QLayoutItem* child;
+    while( (child = ui->scrollAreaLayout_rentalOverview->takeAt(0)) != 0) {
+        child->widget()->setHidden(true);
+        child->widget()->deleteLater();
+    }
+}
+
+void MainWindow::on_lineEdit_RentalOverview_textChanged()
+{
+    userID = -1;
+    QString searchString = ui->lineEdit_RentalOverview->text();
+    clearRentalOverview();
+    rentalFilterList.clear();
+
+    if (searchString == "")
+    {
+        loadRentalOverview(rentalFilterList);
+        return;
+    }
+
+    QRegExp re("\\d*");  // a digit (\d), zero or more times (*)
+    if (re.exactMatch(searchString))
+    {
+        rentalFilterList = searchByItemID(searchString);
+    }
+    else
+    {
+        rentalFilterList = searchByUser(searchString);
+    }
+
+
+    if (rentalFilterList.count() == 0)
+        return;
+
+    loadRentalOverview(rentalFilterList);
+}
+
+QList<int> MainWindow::searchByUser(QString searchString)
+{
+    QList<int> rentalList;
+    QSqlQuery userQuery;
+    userQuery.prepare("SELECT * FROM Users WHERE Name LIKE :user ORDER BY Name");
+    userQuery.bindValue(":user", searchString + "%");
+    if(!userQuery.exec())
+    {
+        QMessageBox::critical(this, "SQL-Error: ", userQuery.lastError().text());
+    }
+    else
+    {
+        while(userQuery.next()) {
+            MainWindow::User u = getUserFromDatabase(userQuery);
+
+            // Search Rentals for UserIDs
+            QSqlQuery rentalQuery;
+            rentalQuery.prepare("SELECT * FROM Rentals WHERE UserID = :userid");
+            rentalQuery.bindValue(":userid", u.ID);
+            if(!rentalQuery.exec())
+            {
+                QMessageBox::critical(this, "SQL-Error: ", rentalQuery.lastError().text());
+            }
+            else
+            {
+                while(rentalQuery.next()) {
+                    rentalList.append(rentalQuery.value("ID").toInt());
+                }
+            }
+        }
+    }
+    return rentalList;
+}
+
+QList<int> MainWindow::searchByItemID(QString searchString)
+{
+    QList<int> rentalList;
+    QSqlQuery itemQuery;
+    itemQuery.prepare("SELECT * FROM Rentals WHERE Itemlist LIKE :itemid");
+
+    itemQuery.bindValue(":itemid", "%"+searchString+"%");
+    if(!itemQuery.exec())
+    {
+        QMessageBox::critical(this, "SQL-Error: ", itemQuery.lastError().text());
+    }
+    else
+    {
+        while(itemQuery.next())
+        {
+            MainWindow::Rental r = getRentalFromDatabase(itemQuery);
+            rentalList.append(r.ID);
+        }
+    }
+    return rentalList;
+}
+
+void MainWindow::returnItemFromRental(QString objectID)
+{
+    int rentalID = getRentalIDfromObjectID(objectID);
+    if(rentalID < 0) return;
+
+    QSqlQuery query;
+    query.prepare("SELECT * FROM Rentals WHERE ID=:rentalid");
+    query.bindValue(":rentalid", rentalID);
+
+    QStringList returnItems;
+    if(!query.exec())
+    {
+        QMessageBox::critical(this, "SQL-Error: ", query.lastError().text());
+    }
+    else
+    {
+        query.next();
+        MainWindow::Rental r = getRentalFromDatabase(query);
+        r.ItemlistReturn.append(objectID);
+        r.ItemlistReturn.sort();
+
+        query.prepare("UPDATE Rentals SET ItemlistReturn=:itemlistreturn WHERE ID=:rentalid");
+        query.bindValue(":rentalid", rentalID);
+        query.bindValue(":itemlistreturn", r.ItemlistReturn.join(","));
+        if(!query.exec())
+        {
+            QMessageBox::critical(this, "SQL-Error: ", query.lastError().text());
+        }
+        else
+        {
+            ui->statusbar->showMessage("👍 Nice, thanks!", statusBarTimeout);
+        }
+    }
+}
+
+int MainWindow::getRentalIDfromObjectID(QString objectID)
+{
+    QList<int> rentalIDs;
+
+    for (MainWindow::Rental r : qAsConst(allRentals))
+    {
+        if(r.Itemlist.contains(objectID) && !r.ItemlistReturn.contains(objectID))
+        {
+            rentalIDs.append(r.ID);
+        }
+    }
+
+    if(rentalIDs.count() != 1)
+    {
+        QMessageBox::critical(this, "Database-Error: ", "multiple entries with ObjectID #" + objectID + " found in Rentals-Database");
+        return -1;
+    }
+    return rentalIDs.at(0);
+}
+
+void MainWindow::loadAllRentals()
+{
+    allRentals.clear();
+
+    QSqlQuery itemQuery;
+    itemQuery.prepare("SELECT * FROM Rentals");
+
+    if(!itemQuery.exec())
+    {
+        QMessageBox::critical(this, "SQL-Error: ", itemQuery.lastError().text());
+    }
+    else
+    {
+        while(itemQuery.next())
+        {
+            MainWindow::Rental r = getRentalFromDatabase(itemQuery);
+            allRentals.append(r);
+        }
+    }
+
+}
 
 // Tab "Show Inventory"
 // =========================
@@ -495,7 +735,6 @@ void MainWindow::on_pushButton_overviewInventory_Reload_clicked()
     {
         MainWindow::Item i = getItemFromDatabase(query);
 
-
         InventoryWidget* inventorywidget = new InventoryWidget();
         inventorywidget->setItemName(QString(i.Manufacturer + " " + i.ObjectName));
         inventorywidget->setItemID(i.ObjectID);
@@ -507,6 +746,10 @@ void MainWindow::on_pushButton_overviewInventory_Reload_clicked()
         }
         if(j%2==0) inventorywidget->setBackgroundDark();
         j++;
+        if(i.MarkedAsRemoved)
+        {
+            inventorywidget->setDisabled(true);
+        }
         inventorywidget->setMainWindow(this);
 
         ui->scrollAreaLayout->addWidget(inventorywidget);
@@ -521,36 +764,24 @@ void MainWindow::clearInventoryOverview()
 {
     if(ui->scrollAreaLayout->count() <= 0) return;
 
-//    for(int i = ui->scrollAreaLayout->count(); i >= 0 ; --i) {
-//       ui->scrollAreaLayout->removeItem(ui->scrollAreaLayout->itemAt(i));
-//       //delete ui->scrollAreaLayout->itemAt(i);
-//    }
-
     QLayoutItem* child;
     while( (child = ui->scrollAreaLayout->takeAt(0)) != 0) {
         child->widget()->setHidden(true);
         child->widget()->deleteLater();
-        //delete child;
     }
-
-//    ui->scrollAreaLayout->update();
-//    ui->scrollAreaWidgetContents->updateGeometry();
-//    ui->scrollArea_InventoryItems->updateGeometry();
-//    ui->tab_inventoryOverview->updateGeometry();
 }
 
 void MainWindow::deleteItemFromInventory(QString ID)
 {
-    qDebug() << "delete Item: " << ID;
     QSqlQuery query;
-    query.prepare("DELETE FROM Inventory WHERE ObjectID = :objectid");
+    query.prepare("UPDATE Inventory SET MarkedAsRemoved=1 WHERE ObjectID = :objectid");
     query.bindValue(":objectid", ID);
 
     if(!query.exec())
     {
-        //qDebug() << query.lastError().text();
         QMessageBox::critical(this, "SQL-Error", query.lastError().text());
     }
+    on_pushButton_overviewInventory_Reload_clicked();
 }
 
 
@@ -578,8 +809,6 @@ void MainWindow::on_pushButton_inventorySave_clicked()
         return;
     }
 
-    takeImage();
-
     QSqlQuery query;
     query.prepare("INSERT INTO Inventory (ObjectName, ObjectID, Manufacturer, StorageRoom, Description) VALUES (:objectname, :objectid, :manufacturer, :storageroom, :description)");
 
@@ -591,6 +820,7 @@ void MainWindow::on_pushButton_inventorySave_clicked()
 
     if(query.exec())
     {
+        takeImage();
         ui->statusbar->showMessage("👍 Supercool! Inventory is stored 'securely'.", statusBarTimeout);
     }
     else if(query.lastError().nativeErrorCode() == "19")
