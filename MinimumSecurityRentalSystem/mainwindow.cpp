@@ -27,12 +27,14 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    setAcceptDrops(true);
+    loadWindowSettings();
+    loadDatabaseSettings();
 
     m_db = QSqlDatabase::addDatabase("QSQLITE");
     m_db.setDatabaseName(filename_db);
     m_db.open();
 
+    setAcceptDrops(true);
 
 
     const QList<QCameraInfo> availableCameras = QCameraInfo::availableCameras();
@@ -87,6 +89,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
+    saveWindowSettings();
     m_db.close();
     delete ui;
 }
@@ -96,8 +99,14 @@ MainWindow::~MainWindow()
 void MainWindow::on_actionPreferences_triggered()
 {
     Settings settingsDialog(this);
+    settingsDialog.setMainWindow(this);
+    settingsDialog.setUiDatabaseFilename(filename_db);
+
     if(settingsDialog.exec())
+    {
         qDebug() << "ok";
+        loadDatabaseSettings();
+    }
     else
         qDebug() << "cancel";
 }
@@ -784,20 +793,6 @@ void MainWindow::deleteItemFromInventory(QString ID)
     on_pushButton_overviewInventory_Reload_clicked();
 }
 
-
-// Tab "Add Inventory"
-// =========================
-//void MainWindow::on_pushButton_takePicture_clicked()
-//{
-//    takeImage();
-//}
-
-//void MainWindow::on_pushButton_loadPicture_clicked()
-//{
-//    QString filename = QFileDialog::getOpenFileName(this, "Open file", "/home", "Images(*.jpg *.png *.tif)");
-//    loadImageFile(filename);
-//}
-
 void MainWindow::on_pushButton_inventorySave_clicked()
 {
     if (ui->lineEdit_objectName->text() == ""){
@@ -895,6 +890,12 @@ void MainWindow::takeImage()
     m_imageCapture->capture(dataDirectory + "img/" + ui->lineEdit_objectID->text() + ".jpg");
 }
 
+
+
+
+
+// drag and drop Events:
+
 void MainWindow::dropEvent(QDropEvent *event)
 {
     const QMimeData* mimeData = event->mimeData();
@@ -926,7 +927,36 @@ void MainWindow::dragLeaveEvent(QDragLeaveEvent *event)
     event->accept();
 }
 
+// load and save Settings:
 
+void MainWindow::saveWindowSettings()
+{
+    QSettings setting(ORGANISATION, APPNAME);
+
+    setting.beginGroup("MainWindow");
+        setting.setValue("position", this->geometry());
+    setting.endGroup();
+}
+
+void MainWindow::loadWindowSettings()
+{
+    QSettings setting(ORGANISATION, APPNAME);
+
+    setting.beginGroup("MainWindow");
+        QRect mainWindowRect = setting.value("position").toRect();
+        setGeometry(mainWindowRect);
+    setting.endGroup();
+}
+
+void MainWindow::loadDatabaseSettings()
+{
+    QSettings setting(ORGANISATION, APPNAME);
+
+    setting.beginGroup("Database");
+        filename_db = setting.value("Filename").toString();
+        dataDirectory = QFileInfo(filename_db).absolutePath() + "/";
+    setting.endGroup();
+}
 
 // others:
 QImage MainWindow::loadImageFile(const QString &filename)
@@ -936,35 +966,48 @@ QImage MainWindow::loadImageFile(const QString &filename)
     return image;
 }
 
+
+
+
+
+// obsolete:
+
 //void MainWindow::setImage(const QImage &newImage)
 //{
 //    itemImage = newImage;
 //    ui->label_Image->setPixmap(QPixmap::fromImage(itemImage));
 //}
+//void MainWindow::on_pushButton_openDialog_clicked()
+//{
 
+//    QMessageBox::information(this, "info", "a dialog!");
+//}
 
+//void MainWindow::createButton()
+//{
+//    //QMessageBox::information(this, "info", "dialog from dynamic signal-slot");
+//    QPushButton* myButton = new QPushButton("test", this);
+//    myButton->setText("dialog box");
+//    connect(myButton, SIGNAL(clicked()), this, SLOT(showMessage()));
+//    //ui->horizontalLayout->addWidget(myButton);
+//}
 
-// unsorted:
+//void MainWindow::showMessage()
+//{
+//    QMessageBox::information(this, "info2", "dialog from dynamic button");
+//}
 
+// Tab "Add Inventory"
+// =========================
+//void MainWindow::on_pushButton_takePicture_clicked()
+//{
+//    takeImage();
+//}
 
-void MainWindow::on_pushButton_openDialog_clicked()
-{
-    QMessageBox::information(this, "info", "a dialog!");
-}
-
-void MainWindow::createButton()
-{
-    //QMessageBox::information(this, "info", "dialog from dynamic signal-slot");
-    QPushButton* myButton = new QPushButton("test", this);
-    myButton->setText("dialog box");
-    connect(myButton, SIGNAL(clicked()), this, SLOT(showMessage()));
-    //ui->horizontalLayout->addWidget(myButton);
-}
-
-void MainWindow::showMessage()
-{
-    QMessageBox::information(this, "info2", "dialog from dynamic button");
-}
-
+//void MainWindow::on_pushButton_loadPicture_clicked()
+//{
+//    QString filename = QFileDialog::getOpenFileName(this, "Open file", "/home", "Images(*.jpg *.png *.tif)");
+//    loadImageFile(filename);
+//}
 
 

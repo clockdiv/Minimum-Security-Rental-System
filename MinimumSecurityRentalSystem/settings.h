@@ -2,6 +2,8 @@
 #define SETTINGS_H
 
 #include <QDialog>
+#include <QFileDialog>
+#include "mainwindow.h"
 
 namespace Ui {
 class Settings;
@@ -14,9 +16,17 @@ class Settings : public QDialog
 public:
     explicit Settings(QWidget *parent = nullptr);
     ~Settings();
+    void setMainWindow(MainWindow* mw);
+    void setUiDatabaseFilename(const QString& filename);
+
+private slots:
+    void on_pushButton_settings_fileopenDatabase_clicked();
+    void on_buttonBox_accepted();
 
 private:
     Ui::Settings *ui;
+    MainWindow* mainWindow;
+    void saveSettings();
 };
 
 #endif // SETTINGS_H

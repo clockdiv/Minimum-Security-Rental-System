@@ -22,12 +22,14 @@ public:
     void addItemToRental(QString ID);
     void removeItemFromRental(QString ID);
     void returnItemFromRental(QString objectID);
+    const QString ORGANISATION = "HfS Ernst Busch";
+    const QString APPNAME = "Minimum Security Rental System";
 
 private:
     Ui::MainWindow *ui;
     QSqlDatabase m_db;
-    QString dataDirectory = "/Users/julian/Documents/Qt/MinimumSecurityRentalSystem/Minimum Security Rental System/data/";
-    QString filename_db = dataDirectory + "inventory.sqlite";
+    QString dataDirectory;
+    QString filename_db;
 
     QImage itemImage;
     int statusBarTimeout = 2000;
@@ -42,6 +44,7 @@ private:
     QScopedPointer<QCamera> m_camera;
     QScopedPointer<QCameraImageCapture> m_imageCapture;
     QImageEncoderSettings m_imageSettings;
+
 
     struct Item {
         int ID;
@@ -81,6 +84,10 @@ private:
     void dragEnterEvent(QDragEnterEvent* event);
     void dragMoveEvent(QDragMoveEvent* event);
     void dragLeaveEvent(QDragLeaveEvent* event);
+
+    void loadWindowSettings();
+    void saveWindowSettings();
+    void loadDatabaseSettings();
 
     Item getItemFromDatabase(QSqlQuery q);
     User getUserFromDatabase(QSqlQuery q);
@@ -149,9 +156,9 @@ private slots:
 //    void setImage(const QImage &newImage);
 
     // unsorted / tests:
-    void createButton();
-    void showMessage();
-    void on_pushButton_openDialog_clicked(); // non-dynamic signal-slot-connection ("auto connect"?)
+//    void createButton();
+//    void showMessage();
+//    void on_pushButton_openDialog_clicked(); // non-dynamic signal-slot-connection ("auto connect"?)
 
 
 };
