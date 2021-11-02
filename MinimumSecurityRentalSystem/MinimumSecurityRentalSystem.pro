@@ -14,14 +14,16 @@ SOURCES += \
     RentalWidget.cpp \
     main.cpp \
     mainwindow.cpp \
-    settings.cpp
+    settings.cpp \
+    smtp.cpp
 
 HEADERS += \
     InventoryWidget.h \
     InventoryWidgetSmall.h \
     RentalWidget.h \
     mainwindow.h \
-    settings.h
+    settings.h \
+    smtp.h
 
 FORMS += \
     InventoryWidget.ui \

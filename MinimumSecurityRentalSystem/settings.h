@@ -18,6 +18,7 @@ public:
     ~Settings();
     void setMainWindow(MainWindow* mw);
     void setUiDatabaseFilename(const QString& filename);
+    void setMailserver(QString emailAddress, QString password, QString server, int port);
 
 private slots:
     void on_pushButton_settings_fileopenDatabase_clicked();

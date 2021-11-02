@@ -3,12 +3,17 @@
 #include <QApplication>
 #include <QStyleFactory>
 #include <QFile>
+#include <QSslSocket>
 
 int main(int argc, char *argv[])
 {
 
 
     QApplication a(argc, argv);
+
+    qDebug() << "SSL:";
+    qDebug() << QSslSocket::supportsSsl() << QSslSocket::sslLibraryBuildVersionString() << QSslSocket::sslLibraryVersionString();
+
     qApp->setStyle(QStyleFactory::create("Fusion"));
     /*
     QPalette p = qApp->palette();

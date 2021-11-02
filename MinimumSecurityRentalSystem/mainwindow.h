@@ -161,6 +161,8 @@ private slots:
 //    void on_pushButton_openDialog_clicked(); // non-dynamic signal-slot-connection ("auto connect"?)
 
 
+    void on_pushButton_sendMail_clicked();
+    void mailSent(QString status);
 };
 
 

@@ -19,6 +19,7 @@
 #include "InventoryWidgetSmall.h"
 #include "RentalWidget.h"
 #include "settings.h"
+#include "smtp.h"
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -101,6 +102,16 @@ void MainWindow::on_actionPreferences_triggered()
     Settings settingsDialog(this);
     settingsDialog.setMainWindow(this);
     settingsDialog.setUiDatabaseFilename(filename_db);
+
+    QSettings setting(ORGANISATION, APPNAME);
+    setting.beginGroup("MailServer");
+        QString emailAddress = setting.value("EmailAddress").toString();
+        QString password = setting.value("Password").toString();
+        QString server = setting.value("Server").toString();
+        int port = setting.value("Port").toInt();
+    setting.endGroup();
+    settingsDialog.setMailserver(emailAddress, password, server, port);
+
 
     if(settingsDialog.exec())
     {
@@ -1010,4 +1021,39 @@ QImage MainWindow::loadImageFile(const QString &filename)
 //    loadImageFile(filename);
 //}
 
+
+
+void MainWindow::on_pushButton_sendMail_clicked()
+{
+    qDebug() << "sending mail";
+    QString mailtext ="<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\"><html xmlns=\"http://www.w3.org/1999/xhtml\"> <head> <meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" /> <title>HTML Mail Title</title> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"/></head><body style=\"margin: 0; padding: 0;\"> <div style=\"background-color: #f00;\"> Hello! </div></body></html>";
+
+
+    QSettings setting(ORGANISATION, APPNAME);
+    setting.beginGroup("MailServer");
+        QString emailAddress = setting.value("EmailAddress").toString();
+        QString password = setting.value("Password").toString();
+        QString server = setting.value("Server").toString();
+        int port = setting.value("Port").toInt();
+    setting.endGroup();
+
+    qDebug() << emailAddress;
+    qDebug() << password;
+    qDebug() << server;
+    qDebug() << port;
+
+    return;
+    Smtp* smtp = new Smtp(emailAddress, password, server, port);
+    connect(smtp, SIGNAL(status(QString)), this, SLOT(mailSent(QString)));
+    smtp->sendMail(emailAddress, "email@email.email", "Test", mailtext);
+}
+
+
+void MainWindow::mailSent(QString status)
+{
+    if(status == "Message sent")
+        ui->statusbar->showMessage("E-Mail sent", statusBarTimeout);
+    else
+        ui->statusbar->showMessage(status, statusBarTimeout);
+}
 
