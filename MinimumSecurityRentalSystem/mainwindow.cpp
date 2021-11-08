@@ -743,6 +743,7 @@ void MainWindow::loadAllRentals()
 
 }
 
+
 // Tab "Show Inventory"
 // =========================
 void MainWindow::on_pushButton_overviewInventory_Reload_clicked()
@@ -804,6 +805,10 @@ void MainWindow::deleteItemFromInventory(QString ID)
     on_pushButton_overviewInventory_Reload_clicked();
 }
 
+
+
+// Tab "Add Inventory"
+// =========================
 void MainWindow::on_pushButton_inventorySave_clicked()
 {
     if (ui->lineEdit_objectName->text() == ""){
@@ -816,18 +821,21 @@ void MainWindow::on_pushButton_inventorySave_clicked()
     }
 
     QSqlQuery query;
-    query.prepare("INSERT INTO Inventory (ObjectName, ObjectID, Manufacturer, StorageRoom, Description) VALUES (:objectname, :objectid, :manufacturer, :storageroom, :description)");
+    query.prepare("INSERT INTO Inventory (Manufacturer, ObjectName, Accessories, ObjectID, StorageRoom, Description) VALUES (:manufacturer, :objectname, :accessories, :objectid,  :storageroom, :description)");
 
-    query.bindValue(":objectname", ui->lineEdit_objectName->text() );
-    query.bindValue(":objectid", ui->lineEdit_objectID->text() );
     query.bindValue(":manufacturer", ui->lineEdit_objectManufacturer->text() );
+    query.bindValue(":objectname", ui->lineEdit_objectName->text() );
+    query.bindValue(":accessories", ui->lineEdit_objectAccessories->text());
+    query.bindValue(":objectid", ui->lineEdit_objectID->text() );
     query.bindValue(":description", ui->lineEdit_itemDescription->text());
     query.bindValue(":storageroom", ui->comboBox_storageRoom->currentText() );
+
 
     if(query.exec())
     {
         takeImage();
         ui->statusbar->showMessage("👍 Supercool! Inventory is stored 'securely'.", statusBarTimeout);
+
     }
     else if(query.lastError().nativeErrorCode() == "19")
     {
@@ -849,56 +857,74 @@ void MainWindow::on_pushButton_inventoryClear_clicked()
 
 
 
-
-
 // methods for camera:
 void MainWindow::setCamera(const QCameraInfo &cameraInfo)
 {
-    qDebug() << "used camera: " << cameraInfo.description();
+    qDebug() << "setCamera" << cameraInfo.description();
     m_camera.reset(new QCamera(cameraInfo));
 
     m_imageCapture.reset(new QCameraImageCapture(m_camera.data()));
+    m_imageSettings.setResolution(1920,1080);
+    m_imageSettings.setQuality(QMultimedia::HighQuality);
+    m_imageCapture->setEncodingSettings(m_imageSettings);
+//    m_imageCapture->setCaptureDestination(QCameraImageCapture::CaptureToBuffer);
 
 
     m_camera->setViewfinder(ui->viewfinder);
 
     connect(m_imageCapture.data(), &QCameraImageCapture::readyForCaptureChanged, this, &MainWindow::readyForCapture);
-    connect(m_imageCapture.data(), &QCameraImageCapture::imageCaptured, this, &MainWindow::processCapturedImage);
-    connect(m_imageCapture.data(), &QCameraImageCapture::imageSaved, this, &MainWindow::imageSaved);
+//    connect(m_imageCapture.data(), &QCameraImageCapture::imageCaptured, this, &MainWindow::processCapturedImage);
+//    connect(m_imageCapture.data(), &QCameraImageCapture::imageSaved, this, &MainWindow::imageSaved);
     connect(m_imageCapture.data(), QOverload<int, QCameraImageCapture::Error, const QString&>::of(&QCameraImageCapture::error),this, &MainWindow::displayCaptureError);
+//    connect(m_imageCapture.data(), &QCameraImageCapture::imageAvailable, this, &MainWindow::imageAvailable);
 
     m_camera->start();
-
-    m_imageSettings.setResolution(1920,1080);
-    m_imageSettings.setQuality(QMultimedia::HighQuality);
-    m_imageCapture->setEncodingSettings(m_imageSettings);
-
 }
 
 void MainWindow::readyForCapture(bool ready)
 {
+    qDebug() << "readyForCapture";
     ui->pushButton_inventorySave->setEnabled(ready);
 }
 
-void MainWindow::processCapturedImage(int requestId, const QImage& img)
-{
+//void MainWindow::imageAvailable(int requestId, const QVideoFrame& preview)
+//{
+//    qDebug() << "image Available" << requestId;
+//}
 
-}
+//void MainWindow::processCapturedImage(int requestId, const QImage& preview)
+//{
+//    //Q_UNUSED(requestId);
+//    qDebug() << "processCapturedImage" << requestId;
+//    QImage scaledImage = preview.scaled(ui->viewfinder->size(),
+//                                    Qt::KeepAspectRatio,
+//                                    Qt::SmoothTransformation);
 
-void MainWindow::imageSaved(int id, const QString &fileName)
-{
-    //ui->label_InventoryAdd_Info->setText("saved as " + fileName);
-    //loadImageFile(fileName);
-}
+//}
+
+//void MainWindow::imageSaved(int id, const QString &fileName)
+//{
+//    Q_UNUSED(id);
+//    Q_UNUSED(fileName);
+//    qDebug() << "imageSaved";
+
+//    //ui->label_InventoryAdd_Info->setText("saved as " + fileName);
+//    //loadImageFile(fileName);
+//}
 
 void MainWindow::displayCaptureError(int id, const QCameraImageCapture::Error error, const QString &errorString)
 {
+    Q_UNUSED(id);
+    Q_UNUSED(error);
     QMessageBox::critical(this, "Error", "capture error" + errorString);
 }
 
 void MainWindow::takeImage()
 {
+    qDebug() << "takeImage";
     m_imageCapture->capture(dataDirectory + "img/" + ui->lineEdit_objectID->text() + ".jpg");
+//    m_imageCapture->capture();
+
 }
 
 
@@ -1026,8 +1052,18 @@ QImage MainWindow::loadImageFile(const QString &filename)
 void MainWindow::on_pushButton_sendMail_clicked()
 {
     qDebug() << "sending mail";
-    QString mailtext ="<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\"><html xmlns=\"http://www.w3.org/1999/xhtml\"> <head> <meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" /> <title>HTML Mail Title</title> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"/></head><body style=\"margin: 0; padding: 0;\"> <div style=\"background-color: #f00;\"> Hello! </div></body></html>";
 
+    QString name = "Max Mustermann";
+    QStringList items;
+    items.append("Mikrofon");
+    items.append("Kamera");
+    items.append("Beamer");
+    QString returndate = "01. Januar 2021";
+    QString projectname = "Testprojekt";
+
+    QString mailtextHtml = "testmail html, " + name;
+
+    QString mailtextPlain = "testmail plain, " + name;
 
     QSettings setting(ORGANISATION, APPNAME);
     setting.beginGroup("MailServer");
@@ -1042,10 +1078,11 @@ void MainWindow::on_pushButton_sendMail_clicked()
     qDebug() << server;
     qDebug() << port;
 
-    return;
+
     Smtp* smtp = new Smtp(emailAddress, password, server, port);
     connect(smtp, SIGNAL(status(QString)), this, SLOT(mailSent(QString)));
-    smtp->sendMail(emailAddress, "email@email.email", "Test", mailtext);
+
+    smtp->sendMail(emailAddress, "a@b.de", "Test", mailtextPlain, mailtextHtml);
 }
 
 

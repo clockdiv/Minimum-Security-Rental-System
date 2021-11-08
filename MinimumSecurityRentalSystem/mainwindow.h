@@ -145,8 +145,9 @@ private slots:
     // methods for camera:
     void setCamera(const QCameraInfo &cameraInfo);
     void readyForCapture(bool ready);
-    void processCapturedImage(int requestId, const QImage& img);
-    void imageSaved(int id, const QString &fileName);
+    //void imageAvailable(int requestId, const QVideoFrame& preview);
+    //void processCapturedImage(int requestId, const QImage& img);
+    //void imageSaved(int id, const QString &fileName);
     void displayCaptureError(int id, const QCameraImageCapture::Error error, const QString &errorString);
     void takeImage();
 

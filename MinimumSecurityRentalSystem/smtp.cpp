@@ -34,7 +34,7 @@ Smtp::Smtp( const QString &user, const QString &pass, const QString &host, int p
 
 }
 
-void Smtp::sendMail(const QString &from, const QString &to, const QString &subject, const QString &body, QStringList files)
+void Smtp::sendMail(const QString &from, const QString &to, const QString &subject, const QString &bodyplain, const QString &bodyhtml, QStringList files)
 {
     message = "To: " + to + "\n";
     message.append("From: " + from + "\n");
@@ -42,14 +42,20 @@ void Smtp::sendMail(const QString &from, const QString &to, const QString &subje
 
     //Let's intitiate multipart MIME with cutting boundary "frontier"
     message.append("MIME-Version: 1.0\n");
-    message.append("Content-Type: multipart/mixed; boundary=frontier\n\n");
-
-
+    //message.append("Content-Type: multipart/mixed; boundary=frontier\n\n");
+    message.append("Content-Type: multipart/alternative; boundary=frontier\n\n");
 
     message.append( "--frontier\n" );
-    message.append( "Content-Type: text/html\n\n" );  //Uncomment this for HTML formating, coment the line below
-    //message.append( "Content-Type: text/plain\n\n" );
-    message.append(body);
+    message.append( "Content-Type: text/plain; charset=\"utf-8\"\n\n" );
+    message.append(bodyplain);
+    message.append("\n\n");
+
+    message.append( "--frontier\n" );
+    message.append( "Content-Type: text/html; charset=\"utf-8\"\n\n" );  //Uncomment this for HTML formating, coment the line below
+    message.append(bodyhtml);
+    message.append("\n\n");
+    message.append( "--frontier\n" );
+
     message.append("\n\n");
 
     if(!files.isEmpty())

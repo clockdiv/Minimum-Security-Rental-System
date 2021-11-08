@@ -608,94 +608,77 @@
           <property name="formAlignment">
            <set>Qt::AlignHCenter|Qt::AlignTop</set>
           </property>
-          <item row="0" column="0">
+          <item row="1" column="0">
            <widget class="QLabel" name="label">
             <property name="text">
-             <string>Item Name</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QLineEdit" name="lineEdit_objectName"/>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_5">
-            <property name="text">
-             <string>Manufacturer</string>
+             <string>Object Name</string>
             </property>
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QLineEdit" name="lineEdit_objectManufacturer"/>
+           <widget class="QLineEdit" name="lineEdit_objectName"/>
           </item>
-          <item row="2" column="0">
+          <item row="3" column="0">
            <widget class="QLabel" name="label_6">
             <property name="text">
              <string>Description</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
+          <item row="3" column="1">
            <widget class="QLineEdit" name="lineEdit_itemDescription"/>
           </item>
-          <item row="3" column="0">
+          <item row="4" column="0">
            <widget class="QLabel" name="label_2">
             <property name="text">
              <string>ID</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="1">
+          <item row="4" column="1">
            <widget class="QLineEdit" name="lineEdit_objectID"/>
           </item>
-          <item row="4" column="0">
+          <item row="5" column="0">
            <widget class="QLabel" name="label_3">
             <property name="text">
              <string>Storage-Room</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="1">
+          <item row="5" column="1">
            <widget class="QComboBox" name="comboBox_storageRoom">
             <property name="currentText">
              <string/>
             </property>
            </widget>
           </item>
-          <item row="5" column="0">
+          <item row="6" column="0">
            <widget class="QLabel" name="label_4">
             <property name="text">
              <string>Photo</string>
             </property>
            </widget>
           </item>
-          <item row="5" column="1">
+          <item row="6" column="1">
            <layout class="QGridLayout" name="gridLayout">
-            <item row="0" column="3">
-             <spacer name="horizontalSpacer_3">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>40</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
             <item row="0" column="0">
              <widget class="QCameraViewfinder" name="viewfinder" native="true">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
               <property name="minimumSize">
                <size>
-                <width>212</width>
-                <height>128</height>
+                <width>512</width>
+                <height>256</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
-                <width>212</width>
-                <height>128</height>
+                <width>65535</width>
+                <height>65535</height>
                </size>
               </property>
               <property name="autoFillBackground">
@@ -705,14 +688,27 @@
             </item>
            </layout>
           </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_5">
+            <property name="text">
+             <string>Manufacturer</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QLineEdit" name="lineEdit_objectManufacturer"/>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_13">
+            <property name="text">
+             <string>Accessories</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLineEdit" name="lineEdit_objectAccessories"/>
+          </item>
          </layout>
-        </item>
-        <item>
-         <widget class="Line" name="line">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-         </widget>
         </item>
         <item>
          <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -820,6 +816,36 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>lineEdit_objectManufacturer</tabstop>
+  <tabstop>lineEdit_objectName</tabstop>
+  <tabstop>lineEdit_objectAccessories</tabstop>
+  <tabstop>lineEdit_itemDescription</tabstop>
+  <tabstop>lineEdit_objectID</tabstop>
+  <tabstop>comboBox_storageRoom</tabstop>
+  <tabstop>pushButton_inventorySave</tabstop>
+  <tabstop>pushButton_inventoryClear</tabstop>
+  <tabstop>lineEdit_userName</tabstop>
+  <tabstop>lineEdit_userSurname</tabstop>
+  <tabstop>comboBox_userDepartment</tabstop>
+  <tabstop>spinBox_userYear</tabstop>
+  <tabstop>lineEdit_userEmail</tabstop>
+  <tabstop>calendarWidget_RentalStart</tabstop>
+  <tabstop>calendarWidget_RentalEnd</tabstop>
+  <tabstop>lineEdit_rentalSearchItem</tabstop>
+  <tabstop>scrollArea</tabstop>
+  <tabstop>scrollArea_2</tabstop>
+  <tabstop>lineEdit_rentalComment</tabstop>
+  <tabstop>pushButton_rentalSave</tabstop>
+  <tabstop>pushButton_sendMail</tabstop>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>scrollArea_rentalOverview</tabstop>
+  <tabstop>pushButton_overviewInventory_Reload</tabstop>
+  <tabstop>pushButton_temp</tabstop>
+  <tabstop>listView_users</tabstop>
+  <tabstop>scrollArea_InventoryItems</tabstop>
+  <tabstop>lineEdit_RentalOverview</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
