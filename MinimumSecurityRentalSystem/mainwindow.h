@@ -2,10 +2,55 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QStandardItemModel>
+#include <QTableView>
+#include <QDate>
 #include <QtSql>
-#include <QDropEvent>
-#include <QCamera>
-#include <QCameraImageCapture>
+#include <QCompleter>
+#include <QMap>
+#include "tableitemdelegate.h"
+#include "rentercompleter.h"
+
+struct Item {
+public:
+    int ID;
+    QString Name;
+    QString Barcode;
+    QString Manufacturer;
+    QString StorageRoom;
+    QString Description;
+    QString DateRemoved;
+    QString Accessoires;
+    QDate Timestamp;
+};
+Q_DECLARE_METATYPE(Item);
+
+struct User {
+public:
+    int ID;
+    QString Name;
+    QString Surname;
+    QString Department;
+    int Year;
+    QString Email;
+    QDate Timestamp;
+};
+Q_DECLARE_METATYPE(User);
+
+struct Rental {
+    int ID;
+    int UserID;
+    QDate DateBegin;
+    QDate DateEnd;
+    QString Room;
+    QString Project;
+    QString Comment;
+    QString AdditionalItems;
+    QDate Timestamp;
+};
+Q_DECLARE_METATYPE(Rental);
+
+
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -18,155 +63,71 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-    void deleteItemFromInventory(QString ID);
-    void addItemToRental(QString ID);
-    void removeItemFromRental(QString ID);
-    void returnItemFromRental(QString objectID);
+    void loadWindowSettings();
+
     const QString ORGANISATION = "HfS Ernst Busch";
     const QString APPNAME = "Minimum Security Rental System";
+    const QString DATEFORMAT = "yyyy-MM-dd";
+    const QString DATEFORMATREADABLE = "ddd, dd.MM.yyyy";
+
+
+
+protected:
+    void resizeEvent(QResizeEvent *event) override;
 
 private:
     Ui::MainWindow *ui;
+    QStandardItemModel *calendarModel = nullptr, *rentalModel = nullptr, *inventoryModel = nullptr;
+    QTableView *frozenInventoryTableView = nullptr, *frozenRentalTableView = nullptr;
     QSqlDatabase m_db;
-    QString dataDirectory;
     QString filename_db;
+    QString dataDirectory;
 
-    QImage itemImage;
-    int statusBarTimeout = 2000;
+    QDate tableStartDate, tableEndDate;
+    QDate rentalStartDate, rentalEndDate;
+    TableItemDelegate *tableItemDelegate = nullptr;
 
-    QStringListModel* nameListModel;
-    QStringList nameList;
-    QStringList itemRentalList;
-    int userID;
+    RenterCompleter *renterNameCompleter = nullptr, *renterSurnameCompleter = nullptr;
+    QStandardItemModel *usersModel = nullptr;
 
-    QString lastSearchItemID;
+    void fillRenterDialog(QMap<int, QVariant> items);
 
-    QScopedPointer<QCamera> m_camera;
-    QScopedPointer<QCameraImageCapture> m_imageCapture;
-    QImageEncoderSettings m_imageSettings;
+    void setCalendarDateRange();
+    void initializeCalendarTable();
+    void initializeInventoryTable();
+    void initializeRentalTable();
 
-
-    struct Item {
-        int ID;
-        QString ObjectName;
-        QString ObjectID;
-        QString Manufacturer;
-        QString StorageRoom;
-        QString Description;
-        int MarkedAsRemoved;
-    };
-
-    struct User {
-        int ID;
-        QString Name;
-        QString Surname;
-        QString Department;
-        int Year;
-        QString Email;
-    };
-
-    struct Rental {
-        int ID;
-        int UserID;
-        QStringList Itemlist;
-        QStringList ItemlistReturn;
-        QDate DateBegin;
-        QDate DateEnd;
-        QString Comment;
-    };
-
-    QMap<int, int> nameListDatabaseIDs;
-    QList<int> rentalFilterList;
-
-    QList<Rental> allRentals;
-
-    void dropEvent(QDropEvent* event);
-    void dragEnterEvent(QDragEnterEvent* event);
-    void dragMoveEvent(QDragMoveEvent* event);
-    void dragLeaveEvent(QDragLeaveEvent* event);
-
-    void loadWindowSettings();
     void saveWindowSettings();
     void loadDatabaseSettings();
+    void loadInventoryFromDB();
 
-    Item getItemFromDatabase(QSqlQuery q);
-    User getUserFromDatabase(QSqlQuery q);
-    Rental getRentalFromDatabase(QSqlQuery q);
+    QList<Rental> getRentalsForItem(int);
+    void updateTableItems();
+    void updateTableGeometry();
+    void moveRow(QStandardItemModel* source, int rowIndex, QStandardItemModel* destination);
 
+    void loadUsersfromDB();
+    int addUserToDB();
+    int updateUserInDB();
+
+    void setItemPreview(QStandardItem*);
+    QImage loadImage(QString);
 
 private slots:
-    // Menü and Tab-Group
-    // =========================
-    void on_actionPreferences_triggered();
-    void on_tabWidget_tabBarClicked(int tabID);
+    void ItemSelectedInInventory(const QModelIndex& index);
+    void ItemSelectedInRental(const QModelIndex& index);
+    void RentalSelectedInInventory(const QModelIndex& index);
+    void dateSelected(const QItemSelection &, const QItemSelection &);
+    void moveItemToRental(const QModelIndex & index);
+    void moveItemToInventory(const QModelIndex & index);
+    void renterNameCompleterActivated(const QModelIndex &index);
+    void renterSurnameCompleterActivated(const QModelIndex &index);
 
-    // Tab "Rental"
-    // =========================
-    void onAddItemClicked(const QString& objectID);     // Empfänger
+    void on_actionSettings_triggered();
+    void on_pushButton_RenterAdd_clicked();
+    void on_pushButton_RenterUpdate_clicked();
+    void on_pushButton_RenterClear_clicked();
 
-    int addUser();
-    void clearInventorySearchResults();
-    void on_lineEdit_userName_textChanged();
-    void on_listView_users_doubleClicked(QModelIndex);
-    void on_lineEdit_rentalSearchItem_textChanged();
-    void on_lineEdit_rentalSearchItem_returnPressed();
-    void on_pushButton_rentalSave_clicked();
-    void on_calendarWidget_RentalStart_selectionChanged();
-    void on_calendarWidget_RentalEnd_selectionChanged();
-
-    // Tab "Reservation"
-    // =========================
-
-    // Tab "Return"
-    // =========================
-
-    // Tab "Overview"
-    // =========================
-    void loadRentalOverview(const QList<int>& rentalFilterList);
-    void clearRentalOverview();
-    void on_lineEdit_RentalOverview_textChanged();
-    QList<int> searchByUser(QString searchString);
-    QList<int> searchByItemID(QString searchString);
-    int getRentalIDfromObjectID(QString objectID);
-    void loadAllRentals();
-
-
-    // Tab "Show Inventory"
-    // =========================
-    void on_pushButton_overviewInventory_Reload_clicked();
-    void on_pushButton_temp_clicked();
-    void clearInventoryOverview();
-
-    // Tab "Add Inventory"
-    // =========================
-//    void on_pushButton_takePicture_clicked();
-//    void on_pushButton_loadPicture_clicked();
-    void on_pushButton_inventorySave_clicked();
-    void on_pushButton_inventoryClear_clicked();
-
-    // methods for camera:
-    void setCamera(const QCameraInfo &cameraInfo);
-    void readyForCapture(bool ready);
-    //void imageAvailable(int requestId, const QVideoFrame& preview);
-    //void processCapturedImage(int requestId, const QImage& img);
-    //void imageSaved(int id, const QString &fileName);
-    void displayCaptureError(int id, const QCameraImageCapture::Error error, const QString &errorString);
-    void takeImage();
-
-    // Common methods:
-    // ===========================
-    QImage loadImageFile(const QString &filename);
-//    void setImage(const QImage &newImage);
-
-    // unsorted / tests:
-//    void createButton();
-//    void showMessage();
-//    void on_pushButton_openDialog_clicked(); // non-dynamic signal-slot-connection ("auto connect"?)
-
-
-    void on_pushButton_sendMail_clicked();
-    void mailSent(QString status);
+    void on_pushButton_ConfirmRental_clicked();
 };
-
-
 #endif // MAINWINDOW_H

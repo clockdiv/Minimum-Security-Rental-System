@@ -57,6 +57,5 @@ void Settings::setMailserver(QString emailAddress, QString password, QString ser
     ui->lineEdit_Settings_EmailAddress->setText(emailAddress);
     ui->lineEdit_Settings_Password->setText(password);
     ui->lineEdit_Settings_Server->setText(server);
-    qDebug() << port;
     ui->spinBox_Settings_Port->setValue(port);
 }

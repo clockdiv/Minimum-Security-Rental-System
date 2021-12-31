@@ -1,4 +1,4 @@
-QT       += core gui sql multimedia multimediawidgets
+QT       += core gui sql
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -9,26 +9,22 @@ CONFIG += c++11
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-    InventoryWidget.cpp \
-    InventoryWidgetSmall.cpp \
-    RentalWidget.cpp \
+    GroupBox_ItemDetails.cpp \
     main.cpp \
     mainwindow.cpp \
+    rentercompleter.cpp \
     settings.cpp \
-    smtp.cpp
+    tableitemdelegate.cpp
 
 HEADERS += \
-    InventoryWidget.h \
-    InventoryWidgetSmall.h \
-    RentalWidget.h \
+    GroupBox_ItemDetails.h \
     mainwindow.h \
+    rentercompleter.h \
     settings.h \
-    smtp.h
+    tableitemdelegate.h
 
 FORMS += \
-    InventoryWidget.ui \
-    InventoryWidgetSmall.ui \
-    RentalWidget.ui \
+    GroupBox_ItemDetails.ui \
     mainwindow.ui \
     settings.ui
 
@@ -36,3 +32,6 @@ FORMS += \
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+RESOURCES += \
+    icons.qrc
