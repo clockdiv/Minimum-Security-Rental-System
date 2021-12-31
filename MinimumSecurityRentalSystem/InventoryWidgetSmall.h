@@ -35,11 +35,16 @@ private:
     MainWindow* mainWindow;
 //    bool labelsEnabled;
 
+signals:
+    void addItemClicked(const QString& objectID);       // Sender
 
 private slots:
     void on_pushButton_InventoryItemSmallAdd_clicked();
     void on_pushButton_InventoryItemSmallRemove_clicked();
     void on_pushButton_InventoryItemSmallReturn_clicked();
+
+
+
 
 };
 

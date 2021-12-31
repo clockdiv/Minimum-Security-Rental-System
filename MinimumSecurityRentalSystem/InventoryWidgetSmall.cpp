@@ -16,7 +16,8 @@ InventoryWidgetSmall::~InventoryWidgetSmall()
 void InventoryWidgetSmall::on_pushButton_InventoryItemSmallAdd_clicked()
 {
     QString objectID = ui->label_inventoryItemSmall_ID->text();
-    mainWindow->addItemToRental(objectID);
+    emit addItemClicked(objectID);
+    //mainWindow->addItemToRental(objectID);
     this->setDisabled(true);
 }
 

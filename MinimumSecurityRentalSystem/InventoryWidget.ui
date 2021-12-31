@@ -81,11 +81,6 @@
          <layout class="QVBoxLayout" name="verticalLayout">
           <item>
            <widget class="QLabel" name="label_inventoryItem_name">
-            <property name="font">
-             <font>
-              <pointsize>21</pointsize>
-             </font>
-            </property>
             <property name="text">
              <string>Manufacturer,  Name</string>
             </property>

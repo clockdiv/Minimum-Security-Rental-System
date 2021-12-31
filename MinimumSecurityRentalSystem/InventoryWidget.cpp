@@ -9,6 +9,10 @@ InventoryWidget::InventoryWidget(QWidget *parent) :
     ui(new Ui::InventoryWidget)
 {
     ui->setupUi(this);
+
+    QFont font = ui->label_inventoryItem_name->font();
+    font.setPointSize(font.pointSize() + 6);
+    ui->label_inventoryItem_name->setFont(font);
 }
 
 InventoryWidget::~InventoryWidget(){}

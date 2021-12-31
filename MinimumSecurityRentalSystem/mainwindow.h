@@ -102,12 +102,14 @@ private slots:
 
     // Tab "Rental"
     // =========================
+    void onAddItemClicked(const QString& objectID);     // Empfänger
+
     int addUser();
+    void clearInventorySearchResults();
     void on_lineEdit_userName_textChanged();
     void on_listView_users_doubleClicked(QModelIndex);
     void on_lineEdit_rentalSearchItem_textChanged();
     void on_lineEdit_rentalSearchItem_returnPressed();
-    void clearInventorySearchResults();
     void on_pushButton_rentalSave_clicked();
     void on_calendarWidget_RentalStart_selectionChanged();
     void on_calendarWidget_RentalEnd_selectionChanged();

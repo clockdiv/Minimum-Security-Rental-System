@@ -279,6 +279,7 @@ void MainWindow::on_listView_users_doubleClicked(QModelIndex index)
 
 void MainWindow::on_lineEdit_rentalSearchItem_textChanged()
 {
+
     clearInventorySearchResults();
 
     QString searchItem = ui->lineEdit_rentalSearchItem->text();
@@ -307,6 +308,7 @@ void MainWindow::on_lineEdit_rentalSearchItem_textChanged()
             inventoryWidgetSmall->setItemDescription(i.Description);
             inventoryWidgetSmall->removeRemoveButton();
             inventoryWidgetSmall->removeReturnButton();
+            connect(inventoryWidgetSmall, SIGNAL(addItemClicked(const QString&)), this, SLOT(onAddItemClicked(const QString&)));
             QImage image = loadImageFile(filename);
             if(image.data_ptr() != NULL) {
                 inventoryWidgetSmall->setImage(image);
@@ -325,12 +327,8 @@ void MainWindow::on_lineEdit_rentalSearchItem_textChanged()
                     inventoryWidgetSmall->setDisabled(true);
                 }
             }
-
-
-
             lastSearchItemID = i.ObjectID;
         }
-
     }
 }
 
@@ -342,6 +340,11 @@ void MainWindow::clearInventorySearchResults()
         child->widget()->setHidden(true);
         child->widget()->deleteLater();
     }
+}
+
+void MainWindow::onAddItemClicked(const QString& objectID)
+{
+    addItemToRental(objectID);
 }
 
 void MainWindow::addItemToRental(QString ID)
@@ -382,8 +385,6 @@ void MainWindow::addItemToRental(QString ID)
             ui->scrollAreaLayout_RentalItems->addWidget(inventoryWidgetSmall);
         }
     }
-
-
 }
 
 void MainWindow::removeItemFromRental(QString ID) {
@@ -1061,8 +1062,9 @@ void MainWindow::on_pushButton_sendMail_clicked()
     QString returndate = "01. Januar 2021";
     QString projectname = "Testprojekt";
 
-    QString mailtextHtml = "testmail html, " + name;
+//    QString mailtextHtml = "testmail html, " + name;
 
+    QString mailtextHtml ="";
     QString mailtextPlain = "testmail plain, " + name;
 
     QSettings setting(ORGANISATION, APPNAME);
