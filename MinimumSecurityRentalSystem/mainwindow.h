@@ -106,14 +106,17 @@ private:
     void updateTableGeometry();
     void moveRow(QStandardItemModel* source, int rowIndex, QStandardItemModel* destination);
 
-    void loadUsersfromDB();
-    int addUserToDB();
-    int updateUserInDB();
+    void loadAllUsers();
+    int saveUser();
+    int updateUser();
+
+    void saveRental();
 
     void showItemPreview(QStandardItem*);
     void showRentalPreview(QStandardItem*);
 
     QImage loadImage(QString);
+    QColor getColorFromUserID(int userID);
 
 private slots:
     void ItemSelectedInInventory(const QModelIndex& index);
@@ -125,6 +128,7 @@ private slots:
     void moveItemToInventory(const QModelIndex & index);
     void renterNameCompleterActivated(const QModelIndex &index);
     void renterSurnameCompleterActivated(const QModelIndex &index);
+    void LineEdit_UserName_changed(const QString&text);
 
     void on_actionSettings_triggered();
     void on_pushButton_RenterAdd_clicked();

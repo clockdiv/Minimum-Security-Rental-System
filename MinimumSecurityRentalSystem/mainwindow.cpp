@@ -65,6 +65,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->inventoryCalendarTableView, &QTableView::clicked, this, &MainWindow::RentalSelectedInInventoryCalendar);
     connect(ui->rentalCalendarTableView, &QTableView::clicked, this, &MainWindow::RentalSelectedInRentalCalendar);
 
+    // clear lineEdits when empty:
+    connect(ui->lineEdit_userName, &QLineEdit::textChanged, this, &MainWindow::LineEdit_UserName_changed);
 
     // move rows when dobule-clicked
     connect(frozenInventoryTableView, &QAbstractItemView::doubleClicked, this, &MainWindow::moveItemToRental);
@@ -95,7 +97,7 @@ MainWindow::MainWindow(QWidget *parent)
             SIGNAL(selectionChanged(const QItemSelection &, const QItemSelection &)),
             SLOT(dateSelected(const QItemSelection &, const QItemSelection &)));
 
-    loadUsersfromDB();
+    loadAllUsers();
 }
 
 
@@ -139,8 +141,8 @@ void MainWindow::fillRenterDialog(QMap<int, QVariant> items)
 }
 
 
-// Table Methods
-// ==============
+// Table GUI
+// =========
 void MainWindow::setCalendarDateRange()
 {
     tableStartDate =  QDate::currentDate().addDays(-30);//QDate::fromString("01-12-2021", "dd-MM-yyyy");
@@ -233,7 +235,6 @@ void MainWindow::updateTableGeometry()
 {
     if(!frozenInventoryTableView) return;
 
-    qDebug() << "updateTableGeometry";
     ui->inventoryCalendarTableView->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     ui->rentalCalendarTableView->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     ui->mainCalendarTableView->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
@@ -247,10 +248,11 @@ void MainWindow::updateTableGeometry()
     ui->inventoryCalendarTableView->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents); // 1) set header coluumns width to content....
     ui->inventoryCalendarTableView->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
     for(int i = 2; i < inventoryModel->columnCount(); i++) {
-        ui->inventoryCalendarTableView->setColumnWidth(i, 30);
+        ui->inventoryCalendarTableView->setColumnWidth(i, 25);
     }
     ui->inventoryCalendarTableView->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed); // 2) ...keep header coluumns width
     ui->inventoryCalendarTableView->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed);
+    ui->inventoryCalendarTableView->resizeRowsToContents();
 
     // 1) MainCalendarView
     for(int i = 0; i < calendarModel->columnCount(); i++) {
@@ -275,6 +277,7 @@ void MainWindow::updateTableGeometry()
     frozenInventoryTableView->setGeometry(0,0,
                                     frozenInventoryTableView->columnWidth(0) + frozenInventoryTableView->columnWidth(1) + frozenInventoryTableView->frameWidth() * 2,
                                     ui->inventoryCalendarTableView->height() );
+    frozenInventoryTableView->resizeRowsToContents();
 
     // 4) rental fixed table
     frozenRentalTableView->setColumnWidth(0, ui->rentalCalendarTableView->columnWidth(0));
@@ -353,7 +356,8 @@ void MainWindow::initializeRentalTable()
     frozenRentalTableView->show();
 }
 
-
+// Item Selection
+// ==============
 void MainWindow::ItemSelectedInInventory(const QModelIndex &index)
 {
     frozenRentalTableView->clearSelection();
@@ -430,16 +434,6 @@ void MainWindow::showRentalPreview(QStandardItem* item)
     ui->groupBox_rentalBooked->show();
 }
 
-
-void MainWindow::dateSelected(const QItemSelection &selected, const QItemSelection &deselected)
-{
-    rentalStartDate = ui->mainCalendarTableView->selectionModel()->selectedIndexes().first().data(Qt::UserRole+1).toDate();
-    rentalEndDate = ui->mainCalendarTableView->selectionModel()->selectedIndexes().last().data(Qt::UserRole+1).toDate();
-
-    ui->label_Rental_startDate->setText(rentalStartDate.toString(DATEFORMATREADABLE));
-    ui->label_Rental_endDate->setText(rentalEndDate.toString(DATEFORMATREADABLE));
-}
-
 void MainWindow::moveItemToRental(const QModelIndex & index)
 {
     moveRow(inventoryModel, index.row(), rentalModel);
@@ -449,6 +443,47 @@ void MainWindow::moveItemToInventory(const QModelIndex & index)
 {
     moveRow(rentalModel, index.row(), inventoryModel);
 }
+
+void MainWindow::moveRow(QStandardItemModel* source, int rowIndex, QStandardItemModel* destination)
+{
+    for(int i = 0; i < source->columnCount(); i++) {
+        if(source->item(rowIndex, i))       // copy only cells with content
+        {
+            QStandardItem* destItem = source->item(rowIndex,i)->clone();
+            if(i==0)
+                destination->setItem(destination->rowCount(), i, destItem); // create new row
+            else
+                destination->setItem(destination->rowCount()-1, i, destItem);  // add to existing row
+        }
+    }
+
+    // sort rental table if needed
+    if(destination == inventoryModel)
+        inventoryModel->sort(0, Qt::AscendingOrder);
+
+   // remove row from source
+    source->removeRow(rowIndex);
+
+    // resize all tables
+    ui->inventoryCalendarTableView->resizeRowsToContents();
+    ui->rentalCalendarTableView->resizeRowsToContents();
+    frozenInventoryTableView->resizeRowsToContents();
+    frozenRentalTableView->resizeRowsToContents();
+}
+
+// Calendar Selection
+// ==================
+void MainWindow::dateSelected(const QItemSelection &selected, const QItemSelection &deselected)
+{
+    rentalStartDate = ui->mainCalendarTableView->selectionModel()->selectedIndexes().first().data(Qt::UserRole+1).toDate();
+    rentalEndDate = ui->mainCalendarTableView->selectionModel()->selectedIndexes().last().data(Qt::UserRole+1).toDate();
+
+    ui->label_Rental_startDate->setText(rentalStartDate.toString(DATEFORMATREADABLE));
+    ui->label_Rental_endDate->setText(rentalEndDate.toString(DATEFORMATREADABLE));
+}
+
+// User
+// ====
 
 void MainWindow::renterNameCompleterActivated(const QModelIndex &index)
 {
@@ -464,8 +499,16 @@ void MainWindow::renterSurnameCompleterActivated(const QModelIndex &index)
     fillRenterDialog(completerSelection);
 }
 
+void MainWindow::LineEdit_UserName_changed(const QString &text)
+{
+    if(text =="") on_pushButton_RenterClear_clicked();
+}
+
+// Inventory
+// =========
 void MainWindow::loadInventoryFromDB()
 {
+    delete inventoryModel;
     inventoryModel = new QStandardItemModel(0, calendarModel->columnCount());
 
     QSqlQuery query("SELECT * FROM Inventory");
@@ -511,9 +554,9 @@ void MainWindow::loadInventoryFromDB()
             {
                 QStandardItem* rentalItem = new QStandardItem;
                 QVariant rentalVariant;
-                rentalVariant.setValue(r);
+                rentalVariant.setValue(r);  // set the rental as data
                 rentalItem->setData(rentalVariant, Qt::UserRole+1);
-                rentalItem->setBackground(Qt::darkGray);
+                rentalItem->setBackground(getColorFromUserID(r.UserID));
                 rentalItem->setToolTip("UserID: " + QString::number(r.UserID)+ ", Project: " + r.Project);
                 inventoryModel->setItem(row, i+2, rentalItem);
             }
@@ -564,30 +607,10 @@ QList<Rental> MainWindow::getRentalsForItem(int itemid)
     return results;
 }
 
-void MainWindow::moveRow(QStandardItemModel* source, int rowIndex, QStandardItemModel* destination)
-{
-    for(int i = 0; i < source->columnCount(); i++) {
-        if(source->item(rowIndex, i))       // copy only cells with content
-        {
-            QStandardItem* destItem = source->item(rowIndex,i)->clone();
-            if(i==0)
-                destination->setItem(destination->rowCount(), i, destItem); // create new row
-            else
-                destination->setItem(destination->rowCount()-1, i, destItem);  // add to existing row
-        }
-    }
-
-    // sort rental table if needed
-    if(destination == inventoryModel)
-        inventoryModel->sort(0, Qt::AscendingOrder);
-
-   // remove row from source
-    source->removeRow(rowIndex);
-}
 
 // User Data Methods
 // =================
-void MainWindow::loadUsersfromDB()
+void MainWindow::loadAllUsers()
 {
     usersModel = new QStandardItemModel;
     QSqlQuery query("SELECT * FROM Users");
@@ -629,7 +652,7 @@ void MainWindow::loadUsersfromDB()
     connect(renterSurnameCompleter, QOverload<const QModelIndex&>::of(&QCompleter::activated), this, &MainWindow::renterSurnameCompleterActivated);
 }
 
-int MainWindow::addUserToDB()
+int MainWindow::saveUser()
 {
     if(ui->lineEdit_userName->text() == "") { QMessageBox::critical(this, "User Error", "Please add renter's name"); return -1; }
     if(ui->lineEdit_userSurname->text() == "") { QMessageBox::critical(this, "User Error", "Please add renter's surname"); return -1; }
@@ -652,7 +675,7 @@ int MainWindow::addUserToDB()
     return query.lastInsertId().toInt();
 }
 
-int MainWindow::updateUserInDB()
+int MainWindow::updateUser()
 {
     QSqlQuery query;
 
@@ -672,11 +695,100 @@ int MainWindow::updateUserInDB()
 
 }
 
+void MainWindow::saveRental()
+{
+    // Check User Information
+    int userID = ui->label_RenterDatabaseID->text().split("#").back().toInt();
+    if(userID <= 0) {
+        userID = saveUser();
+        if(userID < 0) {
+            QMessageBox::critical(this, "Rental Error", "No rental added because of user error.");
+            return;
+        }
+    }
+
+    // Check Start- and End-Date
+    if (!rentalStartDate.isValid() || !rentalEndDate.isValid()) {
+        QMessageBox::critical(this, "Rental Error", "No valid start- or enddate selected");
+        return;
+    }
+
+    Rental currentRental;
+    currentRental.AdditionalItems = ui->lineEdit_Rental_AdditionalItems->text();
+    currentRental.Comment = ui->lineEdit_Rental_Comment->text();
+    currentRental.DateBegin = rentalStartDate;
+    currentRental.DateEnd = rentalEndDate;
+    currentRental.Project = ui->lineEdit_Rental_Project->text();
+    currentRental.Room = ui->lineEdit_Rental_Room->text();
+    currentRental.Timestamp = QDate::currentDate();
+    currentRental.UserID = userID;
+
+
+    // Add rental to Database-Table "Rentals"
+    QSqlQuery query;
+    query.prepare("INSERT INTO Rentals (UserID, DateBegin, DateEnd, Room, Project, AdditionalItems, Comment, Timestamp) VALUES (:userid, :datebegin, :dateend, :room, :project, :additionalitems, :comment, :timestamp)");
+    query.bindValue(":userid", currentRental.UserID);
+    query.bindValue(":datebegin", currentRental.DateBegin.toString(DATEFORMAT));
+    query.bindValue(":dateend", currentRental.DateEnd.toString(DATEFORMAT));
+    query.bindValue(":room", currentRental.Room);
+    query.bindValue(":project", currentRental.Project);
+    query.bindValue(":additionalitems", currentRental.AdditionalItems);
+    query.bindValue(":comment", currentRental.Comment);
+    query.bindValue(":timestamp", currentRental.Timestamp.toString(DATEFORMAT));
+
+    if(!query.exec()) {
+        QMessageBox::critical(this, "SQL-Error: ", query.lastError().text());
+        return;
+    } else {
+        QMessageBox::information(this, "Rental Info", "Rental added");
+    }
+
+    // Get rental-ID and add rented Items to Database-Table "RentedItems"
+
+    currentRental.ID = query.lastInsertId().toInt();
+    int columnStart = tableStartDate.daysTo(rentalStartDate);
+    int daysCount = rentalStartDate.daysTo(rentalEndDate);
+
+    // For every item rented...
+    for(int row = 0; row < rentalModel->rowCount(); row++) {
+        // Insert rented item to DB:
+        int itemID = rentalModel->item(row, 0)->data(Qt::UserRole+1).value<Item>().ID;
+        query.clear();
+        query.prepare("INSERT INTO RentedItems (RentalID, ItemID) VALUES (:rentalid, :itemid)");
+        query.bindValue(":rentalid", currentRental.ID);
+        query.bindValue(":itemid", itemID);
+        if(!query.exec()){
+            QMessageBox::critical(this, "SQL-Error: ", query.lastError().text());
+            return;
+        }
+
+        // Update GUI to show rental-status in calendar:
+        for(int i = columnStart; i <= columnStart + daysCount; i++)
+        {
+            QStandardItem* rentalItem = new QStandardItem;
+            QVariant rentalVariant;
+            rentalVariant.setValue(currentRental);  // set the rental information as data
+            rentalItem->setData(rentalVariant, Qt::UserRole+1);
+            rentalItem->setBackground(getColorFromUserID(currentRental.UserID));
+            rentalItem->setToolTip("UserID: " + QString::number(currentRental.UserID)+ ", Project: " + currentRental.Project);
+            rentalModel->setItem(row, i+2, rentalItem);
+        }
+
+    }
+}
+
 QImage MainWindow::loadImage(QString filename)
 {
     QImageReader imageReader(filename);
     const QImage image = imageReader.read();
     return image;
+}
+
+QColor MainWindow::getColorFromUserID(int userID)
+{
+    QColor c;
+    c.setHsv(userID * 75, 55, 255);
+    return c;
 }
 
 
@@ -709,26 +821,26 @@ void MainWindow::on_actionSettings_triggered()
 
 void MainWindow::on_pushButton_RenterAdd_clicked()
 {
-    int result = addUserToDB();
+    int result = saveUser();
     if(result > -1) {
         ui->label_RenterDatabaseID->setText("ID: #" + QString::number(result));
         QMessageBox::information(this, "Info", "User added");
         delete usersModel;
         delete renterNameCompleter;
         delete renterSurnameCompleter;
-        loadUsersfromDB();
+        loadAllUsers();
     }
 }
 
 void MainWindow::on_pushButton_RenterUpdate_clicked()
 {
-    int result = updateUserInDB();
+    int result = updateUser();
     if(result > -1) {
         QMessageBox::information(this, "Info", "User updated");
         delete usersModel;
         delete renterNameCompleter;
         delete renterSurnameCompleter;
-        loadUsersfromDB();
+        loadAllUsers();
     }
 }
 
@@ -744,54 +856,7 @@ void MainWindow::on_pushButton_RenterClear_clicked()
 
 void MainWindow::on_pushButton_ConfirmRental_clicked()
 {
-    // Check User Information
-    int userID = ui->label_RenterDatabaseID->text().split("#").back().toInt();
-    if(userID <= 0) {
-        userID = addUserToDB();
-        if(userID < 0) {
-            QMessageBox::critical(this, "Rental Error", "No rental added because of user error.");
-            return;
-        }
-    }
-
-    // Check Start- and End-Date
-    if (!rentalStartDate.isValid() || !rentalEndDate.isValid()) {
-        QMessageBox::critical(this, "Rental Error", "No valid start- or enddate selected");
-        return;
-    }
-
-    // Add rental to Database-Table "Rentals"
-    QSqlQuery query;
-    query.prepare("INSERT INTO Rentals (UserID, DateBegin, DateEnd, Room, Project, AdditionalItems, Comment, Timestamp) VALUES (:userid, :datebegin, :dateend, :room, :project, :additionalitems, :comment, :timestamp)");
-    query.bindValue(":userid", userID);
-    query.bindValue(":datebegin", rentalStartDate.toString(DATEFORMAT));
-    query.bindValue(":dateend", rentalEndDate.toString(DATEFORMAT));
-    query.bindValue(":room", ui->lineEdit_Rental_Room->text());
-    query.bindValue(":project", ui->lineEdit_Rental_Project->text());
-    query.bindValue(":additionalitems", ui->lineEdit_Rental_AdditionalItems->text());
-    query.bindValue(":comment", ui->lineEdit_Rental_Comment->text());
-    query.bindValue(":timestamp", QDate::currentDate().toString(DATEFORMAT));
-
-    if(!query.exec()) {
-        QMessageBox::critical(this, "SQL-Error: ", query.lastError().text());
-        return;
-    } else {
-        QMessageBox::information(this, "Rental Info", "Rental added");
-    }
-
-    // Get rental-ID and add rented Items to Database-Table "RentedItems"
-    int rentalID = query.lastInsertId().toInt();
-    for(int i = 0; i < rentalModel->rowCount(); i++) {
-        int itemID = rentalModel->item(i, 0)->data(Qt::UserRole+1).value<Item>().ID;
-        query.clear();
-        query.prepare("INSERT INTO RentedItems (RentalID, ItemID) VALUES (:rentalid, :itemid)");
-        query.bindValue(":rentalid", rentalID);
-        query.bindValue(":itemid", itemID);
-        if(!query.exec()){
-            QMessageBox::critical(this, "SQL-Error: ", query.lastError().text());
-            return;
-        }
-    }
+    saveRental();
 }
 
 // load and save Settings:
