@@ -110,13 +110,16 @@ private:
     int addUserToDB();
     int updateUserInDB();
 
-    void setItemPreview(QStandardItem*);
+    void showItemPreview(QStandardItem*);
+    void showRentalPreview(QStandardItem*);
+
     QImage loadImage(QString);
 
 private slots:
     void ItemSelectedInInventory(const QModelIndex& index);
     void ItemSelectedInRental(const QModelIndex& index);
-    void RentalSelectedInInventory(const QModelIndex& index);
+    void RentalSelectedInInventoryCalendar(const QModelIndex& index);
+    void RentalSelectedInRentalCalendar(const QModelIndex& index);
     void dateSelected(const QItemSelection &, const QItemSelection &);
     void moveItemToRental(const QModelIndex & index);
     void moveItemToInventory(const QModelIndex & index);

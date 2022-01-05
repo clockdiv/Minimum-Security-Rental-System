@@ -62,8 +62,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(frozenRentalTableView, &QTableView::clicked, this, &MainWindow::ItemSelectedInRental);
 
     // show Rental Details when a rental-cell is clicked in one of the tables
-    connect(ui->inventoryCalendarTableView, &QTableView::clicked, this, &MainWindow::RentalSelectedInInventory);
-    //connect(ui->rentalCalendarTableView)
+    connect(ui->inventoryCalendarTableView, &QTableView::clicked, this, &MainWindow::RentalSelectedInInventoryCalendar);
+    connect(ui->rentalCalendarTableView, &QTableView::clicked, this, &MainWindow::RentalSelectedInRentalCalendar);
+
 
     // move rows when dobule-clicked
     connect(frozenInventoryTableView, &QAbstractItemView::doubleClicked, this, &MainWindow::moveItemToRental);
@@ -294,7 +295,9 @@ void MainWindow::initializeInventoryTable()
 
     ui->inventoryCalendarTableView->horizontalHeader()->hide();
     ui->inventoryCalendarTableView->verticalHeader()->hide();
-    ui->inventoryCalendarTableView->setSelectionMode(QAbstractItemView::NoSelection);
+    //ui->inventoryCalendarTableView->setSelectionMode(QAbstractItemView::NoSelection);
+    ui->inventoryCalendarTableView->setSelectionMode(QAbstractItemView::SingleSelection);
+    ui->inventoryCalendarTableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
     ui->inventoryCalendarTableView->show();
 
     // init inventory fixed table
@@ -306,6 +309,9 @@ void MainWindow::initializeInventoryTable()
     frozenInventoryTableView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);  // it's hidden underneath the other scrollbar, still fixes a gui bug
     frozenInventoryTableView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     frozenInventoryTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
+    frozenInventoryTableView->setSelectionMode(QAbstractItemView::SingleSelection);
+    frozenInventoryTableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
 
     for(int i = 2; i < inventoryModel->columnCount(); i++)    {
         frozenInventoryTableView->hideColumn(i);
@@ -321,8 +327,10 @@ void MainWindow::initializeRentalTable()
     ui->rentalCalendarTableView->horizontalHeader()->hide();
     ui->rentalCalendarTableView->verticalHeader()->hide();
     ui->rentalCalendarTableView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    ui->rentalCalendarTableView->setSelectionMode(QAbstractItemView::NoSelection);
+    ui->rentalCalendarTableView->setSelectionMode(QAbstractItemView::SingleSelection);
+    ui->rentalCalendarTableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
     ui->rentalCalendarTableView->show();
+
 
 
     // init fixed table for rental
@@ -334,6 +342,8 @@ void MainWindow::initializeRentalTable()
     frozenRentalTableView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     frozenRentalTableView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     frozenRentalTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
+    frozenRentalTableView->setSelectionMode(QAbstractItemView::SingleSelection);
+    frozenRentalTableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
     ui->rentalCalendarTableView->viewport()->stackUnder(frozenRentalTableView);
     for(int i = 2; i < rentalModel->columnCount(); i++)
@@ -346,27 +356,80 @@ void MainWindow::initializeRentalTable()
 
 void MainWindow::ItemSelectedInInventory(const QModelIndex &index)
 {
+    frozenRentalTableView->clearSelection();
+    ui->rentalCalendarTableView->clearSelection();
+    ui->inventoryCalendarTableView->clearSelection();
+
     QStandardItem *item = inventoryModel->itemFromIndex(index);
-    setItemPreview(item);
+    showItemPreview(item);
 }
 
 void MainWindow::ItemSelectedInRental(const QModelIndex &index)
 {
+    frozenInventoryTableView->clearSelection();
+    ui->rentalCalendarTableView->clearSelection();
+    ui->inventoryCalendarTableView->clearSelection();
+
     QStandardItem *item = rentalModel->itemFromIndex(index);
-    setItemPreview(item);
+    showItemPreview(item);
 }
 
-void MainWindow::RentalSelectedInInventory(const QModelIndex &index)
+void MainWindow::showItemPreview(QStandardItem* item)
 {
+    ui->label_Item_Manufacturer->setText(item->data(Qt::UserRole+1).value<Item>().Manufacturer);
+    ui->label_Item_Name->setText(item->data(Qt::UserRole+1).value<Item>().Name);
+    ui->label_Item_Description->setText(item->data(Qt::UserRole+1).value<Item>().Description);
+    ui->label_Item_Barcode->setText(item->data(Qt::UserRole+1).value<Item>().Barcode);
+    ui->label_Item_Accessoires->setText(item->data(Qt::UserRole+1).value<Item>().Accessoires);
+
+    QString imageFilename = dataDirectory + "img/" + item->data(Qt::UserRole+1).value<Item>().Barcode + ".jpg";
+    QImage itemImage = loadImage(imageFilename);
+    int w = ui->label_Item_Image->width();
+    int h = ui->label_Item_Image->height();
+    ui->label_Item_Image->setPixmap(QPixmap::fromImage(itemImage).scaled(w, h, Qt::KeepAspectRatio));
+
+    ui->groupBox_rentalBooked->hide();
+    ui->groupBox_item->show();
+}
+
+void MainWindow::RentalSelectedInInventoryCalendar(const QModelIndex &index)
+{
+    frozenInventoryTableView->clearSelection();
+    frozenRentalTableView->clearSelection();
+    ui->rentalCalendarTableView->clearSelection();
+
     QStandardItem *item = inventoryModel->itemFromIndex(index);
-    qDebug() << item->data(Qt::UserRole+1).value<Rental>().DateBegin;
+    showRentalPreview(item);
+}
 
+void MainWindow::RentalSelectedInRentalCalendar(const QModelIndex &index)
+{
+    frozenInventoryTableView->clearSelection();
+    frozenRentalTableView->clearSelection();
+    ui->inventoryCalendarTableView->clearSelection();
 
+    QStandardItem *item = rentalModel->itemFromIndex(index);
+    showRentalPreview(item);
+}
+
+void MainWindow::showRentalPreview(QStandardItem* item)
+{
+    if (item->data(Qt::UserRole+1) == QVariant::Invalid) {
+        ui->groupBox_item->hide();
+        ui->groupBox_rentalBooked->hide();
+        return;
+    }
+
+    ui->label_Rental_UserID->setText(QString::number(item->data(Qt::UserRole+1).value<Rental>().UserID));
+    ui->label_Rental_Comment->setText(item->data(Qt::UserRole+1).value<Rental>().Comment);
+    ui->label_Rental_Project->setText(item->data(Qt::UserRole+1).value<Rental>().Project);
+    ui->label_Rental_Room->setText(item->data(Qt::UserRole+1).value<Rental>().Room);
+    ui->label_Rental_AdditionalItems->setText(item->data(Qt::UserRole+1).value<Rental>().AdditionalItems);
 
     ui->groupBox_item->hide();
     ui->groupBox_rentalBooked->show();
-
 }
+
 
 void MainWindow::dateSelected(const QItemSelection &selected, const QItemSelection &deselected)
 {
@@ -607,24 +670,6 @@ int MainWindow::updateUserInDB()
     }
     return 0;
 
-}
-
-void MainWindow::setItemPreview(QStandardItem* item)
-{
-    ui->label_Item_Manufacturer->setText(item->data(Qt::UserRole+1).value<Item>().Manufacturer);
-    ui->label_Item_Name->setText(item->data(Qt::UserRole+1).value<Item>().Name);
-    ui->label_Item_Description->setText(item->data(Qt::UserRole+1).value<Item>().Description);
-    ui->label_Item_Barcode->setText(item->data(Qt::UserRole+1).value<Item>().Barcode);
-    ui->label_Item_Accessoires->setText(item->data(Qt::UserRole+1).value<Item>().Accessoires);
-
-    QString imageFilename = dataDirectory + "img/" + item->data(Qt::UserRole+1).value<Item>().Barcode + ".jpg";
-    QImage itemImage = loadImage(imageFilename);
-    int w = ui->label_Item_Image->width();
-    int h = ui->label_Item_Image->height();
-    ui->label_Item_Image->setPixmap(QPixmap::fromImage(itemImage).scaled(w, h, Qt::KeepAspectRatio));
-
-    ui->groupBox_rentalBooked->hide();
-    ui->groupBox_item->show();
 }
 
 QImage MainWindow::loadImage(QString filename)
