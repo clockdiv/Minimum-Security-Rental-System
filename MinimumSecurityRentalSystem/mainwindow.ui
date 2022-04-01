@@ -112,6 +112,7 @@
      <string>File</string>
     </property>
     <addaction name="actionSettings"/>
+    <addaction name="actionAddInventory"/>
    </widget>
    <addaction name="menuSettings"/>
   </widget>
@@ -667,6 +668,14 @@
   <action name="actionSettings">
    <property name="text">
     <string>Settings</string>
+   </property>
+  </action>
+  <action name="actionAddInventory">
+   <property name="text">
+    <string>Add Inventory</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+A</string>
    </property>
   </action>
  </widget>

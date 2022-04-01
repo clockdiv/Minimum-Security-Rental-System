@@ -10,6 +10,8 @@
 #include <QMap>
 #include "tableitemdelegate.h"
 #include "rentercompleter.h"
+#include "dialoginventoryadd.h"
+
 
 struct Item {
 public:
@@ -131,6 +133,7 @@ private slots:
     void LineEdit_UserName_changed(const QString&text);
 
     void on_actionSettings_triggered();
+    void on_actionAddInventory_triggered();
     void on_pushButton_RenterAdd_clicked();
     void on_pushButton_RenterUpdate_clicked();
     void on_pushButton_RenterClear_clicked();

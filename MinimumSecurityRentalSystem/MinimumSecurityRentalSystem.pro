@@ -1,4 +1,4 @@
-QT       += core gui sql
+QT       += core gui sql multimedia multimediawidgets
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -10,6 +10,7 @@ CONFIG += c++11
 
 SOURCES += \
     GroupBox_ItemDetails.cpp \
+    dialoginventoryadd.cpp \
     main.cpp \
     mainwindow.cpp \
     rentercompleter.cpp \
@@ -18,6 +19,7 @@ SOURCES += \
 
 HEADERS += \
     GroupBox_ItemDetails.h \
+    dialoginventoryadd.h \
     mainwindow.h \
     rentercompleter.h \
     settings.h \
@@ -25,6 +27,7 @@ HEADERS += \
 
 FORMS += \
     GroupBox_ItemDetails.ui \
+    dialoginventoryadd.ui \
     mainwindow.ui \
     settings.ui
 

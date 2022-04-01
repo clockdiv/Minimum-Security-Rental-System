@@ -145,7 +145,7 @@ void MainWindow::fillRenterDialog(QMap<int, QVariant> items)
 // =========
 void MainWindow::setCalendarDateRange()
 {
-    tableStartDate =  QDate::currentDate().addDays(-30);//QDate::fromString("01-12-2021", "dd-MM-yyyy");
+    tableStartDate =  QDate::currentDate().addDays(-90);//QDate::fromString("01-12-2021", "dd-MM-yyyy");
     tableEndDate = QDate::currentDate().addDays(100); // QDate::fromString("31-03-2022", "dd-MM-yyyy");
 }
 
@@ -817,6 +817,14 @@ void MainWindow::on_actionSettings_triggered()
     }
     else
         qDebug() << "cancel";
+}
+
+void MainWindow::on_actionAddInventory_triggered()
+{
+    qDebug() << "Open Inventory";
+    DialogInventoryAdd dialogInventoryAdd;
+    dialogInventoryAdd.setModal(true);
+    dialogInventoryAdd.exec();
 }
 
 void MainWindow::on_pushButton_RenterAdd_clicked()
