@@ -1,4 +1,4 @@
-#include <QDebug>
+﻿#include <QDebug>
 #include <QScrollBar>
 #include <QSizePolicy>
 #include <QTableView>
@@ -11,6 +11,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "rentercompleter.h"
+#include "dialoginventoryadd.h"
 #include "settings.h"
 
 MainWindow::MainWindow(QWidget *parent)
@@ -97,7 +98,14 @@ MainWindow::MainWindow(QWidget *parent)
             SIGNAL(selectionChanged(const QItemSelection &, const QItemSelection &)),
             SLOT(dateSelected(const QItemSelection &, const QItemSelection &)));
 
+
     loadAllUsers();
+
+    QPixmap appLogo(":/icons/renter/icons/AppLogo.png");
+    //ui->AppLogo->setPixmap(*appLogo);
+    QPixmap appLogoScaled = appLogo.scaledToWidth(ui->AppLogo->width(), Qt::TransformationMode::SmoothTransformation);
+    ui->AppLogo->setPixmap(appLogoScaled);
+
 }
 
 
@@ -288,7 +296,7 @@ void MainWindow::updateTableGeometry()
 
     // 5) Resize Logo so that calendar columns fit
     ui->AppLogo->setMinimumWidth(ui->inventoryCalendarTableView->columnWidth(0) + ui->inventoryCalendarTableView->columnWidth(1));
-
+    ui->AppLogo->setMaximumWidth(ui->inventoryCalendarTableView->columnWidth(0) + ui->inventoryCalendarTableView->columnWidth(1));
 }
 
 void MainWindow::initializeInventoryTable()
@@ -527,7 +535,7 @@ void MainWindow::loadInventoryFromDB()
         item.StorageRoom = query.value("StorageRoom").toString();
         item.Accessoires = query.value("Accessoires").toString();
         item.DateRemoved = query.value("DateRemoved").toString();
-        item.Timestamp = query.value("Timestamp").toDate();
+        item.Timestamp = query.value("Timestamp").toDateTime();
 
         // create the items in the table
         QStandardItem* barcodeItem = new QStandardItem(item.Barcode);
@@ -600,7 +608,7 @@ QList<Rental> MainWindow::getRentalsForItem(int itemid)
         rental.Project = rentalsQuery.value("Project").toString();
         rental.AdditionalItems = rentalsQuery.value("AdditionalItems").toString();
         rental.Comment = rentalsQuery.value("Comment").toString();
-        rental.Timestamp = rentalsQuery.value("Timestamp").toDate();
+        rental.Timestamp = rentalsQuery.value("Timestamp").toDateTime();
 
         results.append(rental);
     }
@@ -667,7 +675,7 @@ int MainWindow::saveUser()
     query.bindValue(":department", ui->lineEdit_userDepartment->text().trimmed());
     query.bindValue(":year", ui->lineEdit_userYear->text().trimmed());
     query.bindValue(":email", ui->lineEdit_userEmail->text().trimmed());
-    query.bindValue(":timestamp", QDate::currentDate().toString(DATEFORMAT));
+    query.bindValue(":timestamp", QDateTime::currentDateTime().toString(DATETIMEFORMAT));
     if(!query.exec()) {
         QMessageBox::critical(this, "SQL-Error: ", query.lastError().text());
         return -1;
@@ -720,7 +728,7 @@ void MainWindow::saveRental()
     currentRental.DateEnd = rentalEndDate;
     currentRental.Project = ui->lineEdit_Rental_Project->text();
     currentRental.Room = ui->lineEdit_Rental_Room->text();
-    currentRental.Timestamp = QDate::currentDate();
+    currentRental.Timestamp = QDateTime::currentDateTime();
     currentRental.UserID = userID;
 
 
@@ -734,7 +742,7 @@ void MainWindow::saveRental()
     query.bindValue(":project", currentRental.Project);
     query.bindValue(":additionalitems", currentRental.AdditionalItems);
     query.bindValue(":comment", currentRental.Comment);
-    query.bindValue(":timestamp", currentRental.Timestamp.toString(DATEFORMAT));
+    query.bindValue(":timestamp", currentRental.Timestamp.toString(DATETIMEFORMAT));
 
     if(!query.exec()) {
         QMessageBox::critical(this, "SQL-Error: ", query.lastError().text());
@@ -819,14 +827,6 @@ void MainWindow::on_actionSettings_triggered()
         qDebug() << "cancel";
 }
 
-void MainWindow::on_actionAddInventory_triggered()
-{
-    qDebug() << "Open Inventory";
-    DialogInventoryAdd dialogInventoryAdd;
-    dialogInventoryAdd.setModal(true);
-    dialogInventoryAdd.exec();
-}
-
 void MainWindow::on_pushButton_RenterAdd_clicked()
 {
     int result = saveUser();
@@ -865,6 +865,43 @@ void MainWindow::on_pushButton_RenterClear_clicked()
 void MainWindow::on_pushButton_ConfirmRental_clicked()
 {
     saveRental();
+}
+
+// Add Inventory:
+// =========================
+
+void MainWindow::on_actionAddInventory_triggered()
+{
+    dialogInventoryAdd = new DialogInventoryAdd();
+
+    dialogInventoryAdd->setModal(true);
+    dialogInventoryAdd->dataDirectory = &dataDirectory;
+    connect(dialogInventoryAdd, SIGNAL(addInventoryClicked(InventoryObject)), this, SLOT(addItemToInventory(InventoryObject)));
+    dialogInventoryAdd->show();
+}
+
+void MainWindow::addItemToInventory(const InventoryObject &inventoryObject)
+{
+    QSqlQuery query;
+    query.prepare("INSERT INTO Inventory (Manufacturer, Name, Accessoires, Barcode, StorageRoom, Description, Timestamp) VALUES (:manufacturer, :name, :accessoires, :barcode, :storageroom, :description, :timestamp)");
+
+    query.bindValue(":manufacturer",inventoryObject.manufacturer );
+    query.bindValue(":name",        inventoryObject.name );
+    query.bindValue(":accessoires", inventoryObject.accessoires);
+    query.bindValue(":barcode",     inventoryObject.barcode );
+    query.bindValue(":description", inventoryObject.description);
+    query.bindValue(":storageroom", inventoryObject.storageRoom );
+    query.bindValue(":timestamp",   QDateTime::currentDateTime().toString(DATETIMEFORMAT));
+
+    if(query.exec())
+    {
+        dialogInventoryAdd->takeImage();
+        QMessageBox::information(this, "Success", "Item added to inventory.");
+    }
+    else
+    {
+        QMessageBox::critical(this, "SQL-Error: ", query.lastError().text());
+    }
 }
 
 // load and save Settings:

@@ -32,19 +32,37 @@
       <item>
        <widget class="QLabel" name="AppLogo">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+         <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
         <property name="minimumSize">
          <size>
+          <width>256</width>
+          <height>64</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>1024</width>
+          <height>256</height>
+         </size>
+        </property>
+        <property name="sizeIncrement">
+         <size>
           <width>0</width>
           <height>0</height>
          </size>
         </property>
         <property name="text">
-         <string>Minimum Security Rental System</string>
+         <string/>
+        </property>
+        <property name="scaledContents">
+         <bool>false</bool>
+        </property>
+        <property name="wordWrap">
+         <bool>false</bool>
         </property>
        </widget>
       </item>

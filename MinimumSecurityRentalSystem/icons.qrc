@@ -2,5 +2,6 @@
     <qresource prefix="/icons/renter">
         <file>icons/renterAdd.png</file>
         <file>icons/renterUpdate.png</file>
+        <file>icons/AppLogo.png</file>
     </qresource>
 </RCC>

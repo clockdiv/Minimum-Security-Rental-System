@@ -23,7 +23,7 @@ public:
     QString Description;
     QString DateRemoved;
     QString Accessoires;
-    QDate Timestamp;
+    QDateTime Timestamp;
 };
 Q_DECLARE_METATYPE(Item);
 
@@ -35,7 +35,7 @@ public:
     QString Department;
     int Year;
     QString Email;
-    QDate Timestamp;
+    QDateTime Timestamp;
 };
 Q_DECLARE_METATYPE(User);
 
@@ -48,7 +48,7 @@ struct Rental {
     QString Project;
     QString Comment;
     QString AdditionalItems;
-    QDate Timestamp;
+    QDateTime Timestamp;
 };
 Q_DECLARE_METATYPE(Rental);
 
@@ -69,9 +69,9 @@ public:
 
     const QString ORGANISATION = "HfS Ernst Busch";
     const QString APPNAME = "Minimum Security Rental System";
-    const QString DATEFORMAT = "yyyy-MM-dd";
+    const QString DATEFORMAT= "yyyy-MM-dd";
+    const QString DATETIMEFORMAT = "yyyy-MM-dd hh:mm:ss";
     const QString DATEFORMATREADABLE = "ddd, dd.MM.yyyy";
-
 
 
 protected:
@@ -79,8 +79,10 @@ protected:
 
 private:
     Ui::MainWindow *ui;
+    DialogInventoryAdd* dialogInventoryAdd = nullptr;
     QStandardItemModel *calendarModel = nullptr, *rentalModel = nullptr, *inventoryModel = nullptr;
     QTableView *frozenInventoryTableView = nullptr, *frozenRentalTableView = nullptr;
+//    QPixmap *appLogo = nullptr;
     QSqlDatabase m_db;
     QString filename_db;
     QString dataDirectory;
@@ -139,5 +141,7 @@ private slots:
     void on_pushButton_RenterClear_clicked();
 
     void on_pushButton_ConfirmRental_clicked();
+
+    void addItemToInventory(const InventoryObject&);
 };
 #endif // MAINWINDOW_H
