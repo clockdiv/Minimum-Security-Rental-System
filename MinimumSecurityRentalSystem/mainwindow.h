@@ -8,6 +8,7 @@
 #include <QtSql>
 #include <QCompleter>
 #include <QMap>
+#include <QComboBox>
 #include "tableitemdelegate.h"
 #include "rentercompleter.h"
 #include "dialoginventoryadd.h"
@@ -101,6 +102,8 @@ private:
     void initializeInventoryTable();
     void initializeRentalTable();
 
+    QDate getOldestRentalDate();
+
     void saveWindowSettings();
     void loadDatabaseSettings();
     void loadInventoryFromDB();
@@ -133,6 +136,8 @@ private slots:
     void renterNameCompleterActivated(const QModelIndex &index);
     void renterSurnameCompleterActivated(const QModelIndex &index);
     void LineEdit_UserName_changed(const QString&text);
+    void sortInventoryModelByIndex(int index);
+    void searchItemInInventory(const QString &text);
 
     void on_actionSettings_triggered();
     void on_actionAddInventory_triggered();

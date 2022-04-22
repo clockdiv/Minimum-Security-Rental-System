@@ -29,6 +29,10 @@ MainWindow::MainWindow(QWidget *parent)
         QMessageBox::critical(this, "Database Error", "Database not found. Please select file in Preferences and restart the application.");
     }
 
+    // Init Sort Methods for Inventory Table
+    ui->comboBox_inventorySort->addItem("ID");
+    ui->comboBox_inventorySort->addItem("Name");
+
     setCalendarDateRange();
     initializeCalendarTable();
 
@@ -69,9 +73,17 @@ MainWindow::MainWindow(QWidget *parent)
     // clear lineEdits when empty:
     connect(ui->lineEdit_userName, &QLineEdit::textChanged, this, &MainWindow::LineEdit_UserName_changed);
 
+    // search Item when Text is entered:
+    connect(ui->lineEdit_searchItem, &QLineEdit::textChanged, this, &MainWindow::searchItemInInventory);
+
     // move rows when dobule-clicked
     connect(frozenInventoryTableView, &QAbstractItemView::doubleClicked, this, &MainWindow::moveItemToRental);
     connect(frozenRentalTableView, &QAbstractItemView::doubleClicked, this, &MainWindow::moveItemToInventory);
+
+    // sort entries when ComboBox is clicked
+//    connect(ui->comboBox_inventorySort, QOverload<int>::of(&QComboBox::currentIndexChanged),
+//        [=](int index){ inventoryModel->sort(index, Qt::AscendingOrder); });
+    connect(ui->comboBox_inventorySort, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::sortInventoryModelByIndex);
 
     // Connect tables for synchronous scrolling
     connect(ui->mainCalendarTableView->horizontalScrollBar(), &QAbstractSlider::valueChanged, ui->inventoryCalendarTableView->horizontalScrollBar(), &QAbstractSlider::setValue);
@@ -153,7 +165,8 @@ void MainWindow::fillRenterDialog(QMap<int, QVariant> items)
 // =========
 void MainWindow::setCalendarDateRange()
 {
-    tableStartDate =  QDate::currentDate().addDays(-90);//QDate::fromString("01-12-2021", "dd-MM-yyyy");
+    //tableStartDate =  QDate::currentDate().addDays(-90);//QDate::fromString("01-12-2021", "dd-MM-yyyy");
+    tableStartDate =  getOldestRentalDate();
     tableEndDate = QDate::currentDate().addDays(100); // QDate::fromString("31-03-2022", "dd-MM-yyyy");
 }
 
@@ -364,6 +377,23 @@ void MainWindow::initializeRentalTable()
     frozenRentalTableView->show();
 }
 
+QDate MainWindow::getOldestRentalDate()
+{
+    tableStartDate = QDate::currentDate().addDays(-14);
+
+    QSqlQuery query("SELECT * FROM Rentals");
+    if(!query.exec()){
+        QMessageBox::critical(this, "SQL-Error", query.lastError().text());
+    }
+    while(query.next())
+    {
+        QDate currentRentalDateBegin = query.value("DateBegin").toDate();
+        if(currentRentalDateBegin < tableStartDate)
+            tableStartDate = currentRentalDateBegin;
+    }
+    return tableStartDate.addDays(-1);
+}
+
 // Item Selection
 // ==============
 void MainWindow::ItemSelectedInInventory(const QModelIndex &index)
@@ -467,7 +497,9 @@ void MainWindow::moveRow(QStandardItemModel* source, int rowIndex, QStandardItem
 
     // sort rental table if needed
     if(destination == inventoryModel)
-        inventoryModel->sort(0, Qt::AscendingOrder);
+    {
+        sortInventoryModelByIndex(ui->comboBox_inventorySort->currentIndex());
+    }
 
    // remove row from source
     source->removeRow(rowIndex);
@@ -510,6 +542,35 @@ void MainWindow::renterSurnameCompleterActivated(const QModelIndex &index)
 void MainWindow::LineEdit_UserName_changed(const QString &text)
 {
     if(text =="") on_pushButton_RenterClear_clicked();
+}
+
+void MainWindow::sortInventoryModelByIndex(int index)
+{
+    //int sortColumn = ui->comboBox_inventorySort->currentIndex();
+    inventoryModel->sort(index, Qt::AscendingOrder);
+}
+
+void MainWindow::searchItemInInventory(const QString &text)
+{
+    QList<QStandardItem*> searchResultsBarcodes = inventoryModel->findItems(text, Qt::MatchContains, 0);
+    QList<QStandardItem*> searchResultsNames = inventoryModel->findItems(text, Qt::MatchContains, 1);
+
+    for(int i = 0; i < inventoryModel->rowCount(); i++) {
+        ui->inventoryCalendarTableView->hideRow(i);
+        frozenInventoryTableView->hideRow(i);
+    }
+
+    for(QStandardItem* item : searchResultsBarcodes)
+    {
+        ui->inventoryCalendarTableView->showRow(item->row());
+        frozenInventoryTableView->showRow(item->row());
+    }
+
+    for(QStandardItem* item : searchResultsNames)
+    {
+        ui->inventoryCalendarTableView->showRow(item->row());
+        frozenInventoryTableView->showRow(item->row());
+    }
 }
 
 // Inventory
@@ -571,6 +632,8 @@ void MainWindow::loadInventoryFromDB()
         }
         row++;
     }
+
+    sortInventoryModelByIndex(ui->comboBox_inventorySort->currentIndex());
 
     qDebug() << "Inventory loaded:" << inventoryModel->rowCount() << "items found";
 }
@@ -758,7 +821,8 @@ void MainWindow::saveRental()
     int daysCount = rentalStartDate.daysTo(rentalEndDate);
 
     // For every item rented...
-    for(int row = 0; row < rentalModel->rowCount(); row++) {
+    for(int row = 0; row < rentalModel->rowCount(); row++)
+    {
         // Insert rented item to DB:
         int itemID = rentalModel->item(row, 0)->data(Qt::UserRole+1).value<Item>().ID;
         query.clear();
@@ -781,8 +845,13 @@ void MainWindow::saveRental()
             rentalItem->setToolTip("UserID: " + QString::number(currentRental.UserID)+ ", Project: " + currentRental.Project);
             rentalModel->setItem(row, i+2, rentalItem);
         }
-
     }
+    // Move all rented items back down to Inventory-Table
+    while(rentalModel->rowCount() > 0)
+    {
+        moveRow(rentalModel, 0, inventoryModel);
+    }
+
 }
 
 QImage MainWindow::loadImage(QString filename)
