@@ -87,12 +87,9 @@
        <widget class="QComboBox" name="comboBox_inventorySort"/>
       </item>
       <item>
-       <widget class="QLineEdit" name="lineEdit_searchItem"/>
-      </item>
-      <item>
-       <widget class="QPushButton" name="pushButton">
-        <property name="text">
-         <string>PushButton</string>
+       <widget class="QLineEdit" name="lineEdit_searchItem">
+        <property name="placeholderText">
+         <string>Search</string>
         </property>
        </widget>
       </item>
@@ -437,7 +434,7 @@
         <item row="0" column="0">
          <widget class="QLabel" name="label_8">
           <property name="text">
-           <string>User ID:</string>
+           <string>Rented by</string>
           </property>
          </widget>
         </item>

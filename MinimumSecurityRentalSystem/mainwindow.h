@@ -45,6 +45,7 @@ struct Rental {
     int UserID;
     QDate DateBegin;
     QDate DateEnd;
+    QDate DateReturned;
     QString Room;
     QString Project;
     QString Comment;

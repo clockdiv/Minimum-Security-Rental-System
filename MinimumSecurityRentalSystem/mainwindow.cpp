@@ -426,10 +426,12 @@ void MainWindow::showItemPreview(QStandardItem* item)
 
     QString imageFilename = dataDirectory + "img/" + item->data(Qt::UserRole+1).value<Item>().Barcode + ".jpg";
     QImage itemImage = loadImage(imageFilename);
-    int w = ui->label_Item_Image->width();
-    int h = ui->label_Item_Image->height();
-    ui->label_Item_Image->setPixmap(QPixmap::fromImage(itemImage).scaled(w, h, Qt::KeepAspectRatio));
-
+    if(!itemImage.isNull())
+    {
+        int w = ui->label_Item_Image->width();
+        int h = ui->label_Item_Image->height();
+        ui->label_Item_Image->setPixmap(QPixmap::fromImage(itemImage).scaled(w, h, Qt::KeepAspectRatio));
+    }
     ui->groupBox_rentalBooked->hide();
     ui->groupBox_item->show();
 }
@@ -462,7 +464,17 @@ void MainWindow::showRentalPreview(QStandardItem* item)
         return;
     }
 
-    ui->label_Rental_UserID->setText(QString::number(item->data(Qt::UserRole+1).value<Rental>().UserID));
+    QString userID = QString::number(item->data(Qt::UserRole+1).value<Rental>().UserID);
+    QSqlQuery userQuery;
+    userQuery.prepare("SELECT Name, Surname, Department FROM Users WHERE ID=:id");
+    userQuery.bindValue(":id", userID);
+    if(!userQuery.exec()) {
+        QMessageBox::critical(this, "SQL-Error: ", userQuery.lastError().text());
+    }
+    userQuery.first();
+    QString rentedBy = userQuery.value("Name").toString() + " " + userQuery.value("Surname").toString() + ", " + userQuery.value("Department").toString();
+
+    ui->label_Rental_UserID->setText(rentedBy);
     ui->label_Rental_Comment->setText(item->data(Qt::UserRole+1).value<Rental>().Comment);
     ui->label_Rental_Project->setText(item->data(Qt::UserRole+1).value<Rental>().Project);
     ui->label_Rental_Room->setText(item->data(Qt::UserRole+1).value<Rental>().Room);
@@ -619,6 +631,8 @@ void MainWindow::loadInventoryFromDB()
         {
             int columnStart = tableStartDate.daysTo(r.DateBegin);
             int daysCount = r.DateBegin.daysTo(r.DateEnd);
+            int columnReturned = tableStartDate.daysTo(r.DateReturned);
+
             for(int i = columnStart; i <= columnStart + daysCount; i++)
             {
                 QStandardItem* rentalItem = new QStandardItem;
@@ -629,6 +643,14 @@ void MainWindow::loadInventoryFromDB()
                 rentalItem->setToolTip("UserID: " + QString::number(r.UserID)+ ", Project: " + r.Project);
                 inventoryModel->setItem(row, i+2, rentalItem);
             }
+
+            QStandardItem* modelItem = inventoryModel->item(row, columnReturned+2);
+            if (!modelItem) {
+                modelItem = new QStandardItem;
+                inventoryModel->setItem(row, columnReturned+2, modelItem);
+            }
+            modelItem->setForeground(QColor(255,0,0));
+            modelItem->setText("r");
         }
         row++;
     }
@@ -667,14 +689,18 @@ QList<Rental> MainWindow::getRentalsForItem(int itemid)
         rental.UserID = rentalsQuery.value("UserID").toInt();
         rental.DateBegin = rentalsQuery.value("DateBegin").toDate();
         rental.DateEnd = rentalsQuery.value("DateEnd").toDate();
+        rental.DateReturned = query.value("DateReturned").toDate();
         rental.Room = rentalsQuery.value("Room").toString();
         rental.Project = rentalsQuery.value("Project").toString();
         rental.AdditionalItems = rentalsQuery.value("AdditionalItems").toString();
         rental.Comment = rentalsQuery.value("Comment").toString();
         rental.Timestamp = rentalsQuery.value("Timestamp").toDateTime();
 
+//        if (dateReturned.isNull()) rental.DateEnd = QDate::currentDate();
         results.append(rental);
     }
+
+
     return results;
 }
 
@@ -689,11 +715,13 @@ void MainWindow::loadAllUsers()
     while(query.next())
     {
         QList<QStandardItem*> user;
+
         QStandardItem *item = new QStandardItem;
         item->setText(query.value("Name").toString() + " " +
                       query.value("Surname").toString() + ", " +
                       query.value("Department").toString());
         item->setData(query.value("Name").toString(), RenterCompleter::CompleteRole);
+
         user.append(item);
         user.append(new QStandardItem(query.value("ID").toString()));
         user.append(new QStandardItem(query.value("Name").toString()));
@@ -701,6 +729,7 @@ void MainWindow::loadAllUsers()
         user.append(new QStandardItem(query.value("Department").toString()));
         user.append(new QStandardItem(query.value("Year").toString()));
         user.append(new QStandardItem(query.value("Email").toString()));
+
         usersModel->appendRow(user);
     }
 
@@ -864,7 +893,7 @@ QImage MainWindow::loadImage(QString filename)
 QColor MainWindow::getColorFromUserID(int userID)
 {
     QColor c;
-    c.setHsv(userID * 75, 55, 255);
+    c.setHsv(userID * 75, 255, 255);
     return c;
 }
 
