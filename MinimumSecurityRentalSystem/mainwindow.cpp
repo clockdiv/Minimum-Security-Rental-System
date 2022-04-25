@@ -486,7 +486,20 @@ void MainWindow::showRentalPreview(QStandardItem* item)
 
 void MainWindow::moveItemToRental(const QModelIndex & index)
 {
-    moveRow(inventoryModel, index.row(), rentalModel);
+    int itemRow = inventoryModel->itemFromIndex(index)->row();
+    QString barcode = inventoryModel->item(itemRow,0)->text();
+    int itemID = getItemIDfromBarcode(barcode);
+
+    if(isItemAvailable(itemID))
+    {
+        ui->lineEdit_searchItem->setText("");
+        moveRow(inventoryModel, index.row(), rentalModel);
+    }
+    else
+    {
+        QMessageBox::information(this,"nooo", "Could not add to rental because the item is not returned yet.");
+    }
+
 }
 
 void MainWindow::moveItemToInventory(const QModelIndex & index)
@@ -565,22 +578,17 @@ void MainWindow::sortInventoryModelByIndex(int index)
 void MainWindow::searchItemInInventory(const QString &text)
 {
     // hide everything in inventory table (and in according frozen table)
-    for(int i = 0; i < inventoryModel->rowCount(); i++) {
+    for(int i = 0; i < inventoryModel->rowCount(); i++)
+    {
         ui->inventoryCalendarTableView->hideRow(i);
         frozenInventoryTableView->hideRow(i);
     }
-
-    // search for Barcodes and show results
-    QList<QStandardItem*> searchResultsBarcodes = inventoryModel->findItems(text, Qt::MatchContains, 0);
-    for(QStandardItem* item : searchResultsBarcodes)
-    {
-        ui->inventoryCalendarTableView->showRow(item->row());
-        frozenInventoryTableView->showRow(item->row());
-    }
-
-    // search for Text and show results
-    QList<QStandardItem*> searchResultsText = inventoryModel->findItems(text, Qt::MatchContains, 1);
-    for(QStandardItem* item : searchResultsText)
+    // search for Barcodes
+    QList<QStandardItem*> searchResults = inventoryModel->findItems(text, Qt::MatchContains, 0);
+    // add Text search
+    searchResults += inventoryModel->findItems(text, Qt::MatchContains, 1);
+    // show results
+    for(QStandardItem* item : searchResults)
     {
         ui->inventoryCalendarTableView->showRow(item->row());
         frozenInventoryTableView->showRow(item->row());
@@ -592,17 +600,11 @@ void MainWindow::searchItemInInventoryReturnPressed()
     QString searchText = ui->lineEdit_searchItem->text();
     QList<QStandardItem*> searchResults = inventoryModel->findItems(searchText, Qt::MatchContains, 0);
     searchResults.append(inventoryModel->findItems(searchText, Qt::MatchContains, 1));
+
     if(searchResults.count() == 1)
     {
         int row = searchResults.at(0)->row();
-        QString barcode = inventoryModel->item(row, 0)->text();
-        int itemID = getItemIDfromBarcode(barcode);
-        if(isItemAvailable(itemID))
-        {
-            qDebug() << "moving item";
-            moveItemToRental(inventoryModel->item(row, 0)->index());
-            ui->lineEdit_searchItem->setText("");
-        }
+        moveItemToRental(inventoryModel->item(row, 0)->index());
     }
 }
 
