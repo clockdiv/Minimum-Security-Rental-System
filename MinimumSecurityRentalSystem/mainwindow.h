@@ -119,12 +119,15 @@ private:
     int updateUser();
 
     void saveRental();
+    int getItemIDfromBarcode(QString barcode);
+    int isItemAvailable(int itemID);
 
     void showItemPreview(QStandardItem*);
     void showRentalPreview(QStandardItem*);
 
     QImage loadImage(QString);
-    QColor getColorFromUserID(int userID);
+    QColor getColorFromUserID(int userID, int isOverdue = 0);
+
 
 private slots:
     void ItemSelectedInInventory(const QModelIndex& index);
@@ -139,6 +142,7 @@ private slots:
     void LineEdit_UserName_changed(const QString&text);
     void sortInventoryModelByIndex(int index);
     void searchItemInInventory(const QString &text);
+    void searchItemInInventoryReturnPressed();
 
     void on_actionSettings_triggered();
     void on_actionAddInventory_triggered();

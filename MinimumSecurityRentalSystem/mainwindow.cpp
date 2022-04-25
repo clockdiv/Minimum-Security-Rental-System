@@ -75,6 +75,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     // search Item when Text is entered:
     connect(ui->lineEdit_searchItem, &QLineEdit::textChanged, this, &MainWindow::searchItemInInventory);
+    connect(ui->lineEdit_searchItem, &QLineEdit::returnPressed, this, &MainWindow::searchItemInInventoryReturnPressed);
+
 
     // move rows when dobule-clicked
     connect(frozenInventoryTableView, &QAbstractItemView::doubleClicked, this, &MainWindow::moveItemToRental);
@@ -244,8 +246,6 @@ void MainWindow::initializeCalendarTable()
     ui->mainCalendarTableView->setFocusPolicy(Qt::NoFocus);
     //ui->mainCalendarTableView->setSelectionMode(QAbstractItemView::NoSelection);
     //ui->mainCalendarTableView->verticalHeader()->setFixedWidth(ui->itemsTableView->verticalHeader()->width());
-
-    qDebug() << "Column with today's date:" << columnWithTodaysDate;
 
     // Set Delegate
 //    tableItemDelegate = new TableItemDelegate(this);
@@ -564,24 +564,45 @@ void MainWindow::sortInventoryModelByIndex(int index)
 
 void MainWindow::searchItemInInventory(const QString &text)
 {
-    QList<QStandardItem*> searchResultsBarcodes = inventoryModel->findItems(text, Qt::MatchContains, 0);
-    QList<QStandardItem*> searchResultsNames = inventoryModel->findItems(text, Qt::MatchContains, 1);
-
+    // hide everything in inventory table (and in according frozen table)
     for(int i = 0; i < inventoryModel->rowCount(); i++) {
         ui->inventoryCalendarTableView->hideRow(i);
         frozenInventoryTableView->hideRow(i);
     }
 
+    // search for Barcodes and show results
+    QList<QStandardItem*> searchResultsBarcodes = inventoryModel->findItems(text, Qt::MatchContains, 0);
     for(QStandardItem* item : searchResultsBarcodes)
     {
         ui->inventoryCalendarTableView->showRow(item->row());
         frozenInventoryTableView->showRow(item->row());
     }
 
-    for(QStandardItem* item : searchResultsNames)
+    // search for Text and show results
+    QList<QStandardItem*> searchResultsText = inventoryModel->findItems(text, Qt::MatchContains, 1);
+    for(QStandardItem* item : searchResultsText)
     {
         ui->inventoryCalendarTableView->showRow(item->row());
         frozenInventoryTableView->showRow(item->row());
+    }
+}
+
+void MainWindow::searchItemInInventoryReturnPressed()
+{
+    QString searchText = ui->lineEdit_searchItem->text();
+    QList<QStandardItem*> searchResults = inventoryModel->findItems(searchText, Qt::MatchContains, 0);
+    searchResults.append(inventoryModel->findItems(searchText, Qt::MatchContains, 1));
+    if(searchResults.count() == 1)
+    {
+        int row = searchResults.at(0)->row();
+        QString barcode = inventoryModel->item(row, 0)->text();
+        int itemID = getItemIDfromBarcode(barcode);
+        if(isItemAvailable(itemID))
+        {
+            qDebug() << "moving item";
+            moveItemToRental(inventoryModel->item(row, 0)->index());
+            ui->lineEdit_searchItem->setText("");
+        }
     }
 }
 
@@ -630,11 +651,15 @@ void MainWindow::loadInventoryFromDB()
         for(const Rental &r : qAsConst(itemRentals))
         {
             int columnStart = tableStartDate.daysTo(r.DateBegin);
-            int daysCount = r.DateBegin.daysTo(r.DateEnd);
-            int columnReturned = tableStartDate.daysTo(r.DateReturned);
+            int columnEnd = tableStartDate.daysTo(r.DateEnd);
+            int columnReturned = r.DateReturned.isValid() ? tableStartDate.daysTo(r.DateReturned) : -1;
+            int columnToday = tableStartDate.daysTo(QDate::currentDate());
 
-            for(int i = columnStart; i <= columnStart + daysCount; i++)
+            // Mark as "rented" in less bright color
+            for(int i = columnStart; i <= columnEnd; i++)
             {
+                if(columnReturned > -1 && columnReturned < i)
+                    break;
                 QStandardItem* rentalItem = new QStandardItem;
                 QVariant rentalVariant;
                 rentalVariant.setValue(r);  // set the rental as data
@@ -644,13 +669,32 @@ void MainWindow::loadInventoryFromDB()
                 inventoryModel->setItem(row, i+2, rentalItem);
             }
 
-            QStandardItem* modelItem = inventoryModel->item(row, columnReturned+2);
-            if (!modelItem) {
-                modelItem = new QStandardItem;
-                inventoryModel->setItem(row, columnReturned+2, modelItem);
+            // Mark as "overdue" in less bright color
+            for(int i = columnEnd; i <= columnToday; i++) {
+                if(columnReturned > -1 && columnReturned < i)
+                    break;
+                QStandardItem* rentalItem = new QStandardItem;
+                QVariant rentalVariant;
+                rentalVariant.setValue(r);  // set the rental as data
+                rentalItem->setText("o");
+                rentalItem->setData(rentalVariant, Qt::UserRole+1);
+                rentalItem->setForeground(QColor(0,0,0));
+                rentalItem->setBackground(getColorFromUserID(r.UserID, 1));
+                rentalItem->setToolTip("UserID: " + QString::number(r.UserID)+ ", Project: " + r.Project);
+                inventoryModel->setItem(row, i+2, rentalItem);
             }
-            modelItem->setForeground(QColor(255,0,0));
-            modelItem->setText("r");
+
+            // Mark as "returned"
+            if(columnReturned > -1){ // if Item in this rental is returned
+                QStandardItem* rentalItem = inventoryModel->item(row, columnReturned+2);
+                if (!rentalItem) {
+                    rentalItem = new QStandardItem;
+                    inventoryModel->setItem(row, columnReturned+2, rentalItem);
+                }
+                rentalItem->setForeground(QColor(0,0,0));
+                QString s = rentalItem->text();
+                rentalItem->setText(s+"r");
+            }
         }
         row++;
     }
@@ -883,6 +927,44 @@ void MainWindow::saveRental()
 
 }
 
+int MainWindow::getItemIDfromBarcode(QString barcode)
+{
+    QSqlQuery query;
+    query.prepare("SELECT ID FROM Inventory WHERE Barcode=:barcode");
+    query.bindValue(":barcode", barcode);
+    if(!query.exec()){
+        QMessageBox::critical(this, "SQL-Error", query.lastError().text());
+    }
+    query.first();
+    return query.value("ID").toInt();
+}
+
+int MainWindow::isItemAvailable(int itemID)
+{
+    QSqlQuery query;
+    query.prepare("SELECT DateReturned FROM RentedItems WHERE ItemID=:itemid");
+    query.bindValue(":itemid", itemID);
+    if(!query.exec()) {
+        QMessageBox::critical(this, "SQL-Error", query.lastError().text());
+    }
+    QDate latestRentalReturnDate;
+
+    int count = 0;
+    while(query.next()) {
+        latestRentalReturnDate = query.value("DateReturned").toDate();
+        count++;
+    }
+
+    if (count == 0)
+    {
+        return 1;   // item was never rented, should be available
+    }
+    else
+    {
+        return latestRentalReturnDate.isValid(); // if there is entry in "DateRecord", the item should be available
+    }
+}
+
 QImage MainWindow::loadImage(QString filename)
 {
     QImageReader imageReader(filename);
@@ -890,10 +972,14 @@ QImage MainWindow::loadImage(QString filename)
     return image;
 }
 
-QColor MainWindow::getColorFromUserID(int userID)
+QColor MainWindow::getColorFromUserID(int userID, int isOverdue)
 {
     QColor c;
-    c.setHsv(userID * 75, 255, 255);
+    if(!isOverdue)
+        c.setHsv(userID * 75, 255, 255);
+    else
+        c.setHsv(userID * 75, 66, 255);
+
     return c;
 }
 
